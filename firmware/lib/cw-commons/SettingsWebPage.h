@@ -189,6 +189,16 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
           exclusive: "cw-cf-0x07"
         },
         {
+          title: "Clear Local Canvas",
+          description: "Delete the local Canvas JSON and temporary files. Full URLs still require Download; a legacy server/file source will be fetched at the next startup.",
+          formInput: "<p>Remove the locally cached clockface.</p>",
+          icon: "fa-trash",
+          buttonText: "Clear Cache",
+          save: "clearCanvasCache()",
+          property: "canvasClear",
+          exclusive: "cw-cf-0x07"
+        },
+        {
           title: "Canvas Description File",
           description: "Legacy source name, used only when there is no local cache or Canvas URL.",
           formInput: "<input id='descFile' class='w3-input w3-light-grey' name='descFile' type='text' placeholder='Description File' value='" + settings.canvasfile + "'>",
@@ -252,7 +262,7 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         { title: "General Settings", properties: ["use24hFormat", "timeZone", "ntpServer", "manualPosix"] },
         { title: "Display Settings", properties: ["displayBright", "swapBlueGreen", "swapBlueRed", "displayRotation", "driver", "i2cSpeed", "E_pin"] },
         { title: "Automatic Brightness", properties: ["autoBright", "ldrPin", "autoBrightLevels", "autoBrightFade"] },
-        { title: "Canvas", properties: ["canvasUrl", "canvasUpload", "canvasFile", "canvasServer"] },
+        { title: "Canvas", properties: ["canvasUrl", "canvasUpload", "canvasClear", "canvasFile", "canvasServer"] },
         { title: "Wi-Fi Settings", properties: ["wifiAutoConfig"] },
         { title: "OTA Settings", properties: ["otaEnabled", "otaPassword", "firmwareUpload"] }
       ];
@@ -352,6 +362,22 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         status.textContent = 'The selected file is not valid JSON.';
         status.style.display = 'block';
       });
+    }
+
+    function clearCanvasCache() {
+      if (!confirm('Delete the local Canvas cache?')) return;
+      const status = document.getElementById('status');
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function () {
+        status.textContent = this.status == 202 ? 'Canvas cache clear requested.' : 'Could not clear the Canvas cache.';
+        status.style.display = 'block';
+      };
+      xhr.onerror = function () {
+        status.textContent = 'Could not clear the Canvas cache.';
+        status.style.display = 'block';
+      };
+      xhr.open('POST', '/canvas/clear');
+      xhr.send();
     }
 
     function uploadFirmware() {

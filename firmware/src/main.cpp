@@ -225,6 +225,8 @@ void loop()
         clockface->downloadConfiguredUrl();
       if (webServer->takeCanvasUpload() && !clockface->loadUploadedDefinition())
         Serial.println("[Canvas] Could not activate uploaded clockface");
+      if (webServer->takeCanvasCacheClear() && !clockface->clearLocalCache())
+        Serial.println("[Canvas] Could not clear local cache");
     }
     ezt::events();
   }

@@ -25,6 +25,7 @@ struct ClockwiseWebServer
   bool force_restart;
   bool canvasUploadReady = false;
   bool canvasDownloadReady = false;
+  bool canvasCacheClearReady = false;
   const char* HEADER_TEMPLATE_D = "X-%s: %d\r\n";
   const char* HEADER_TEMPLATE_S = "X-%s: %s\r\n";
  
@@ -146,6 +147,13 @@ struct ClockwiseWebServer
   {
     const bool ready = canvasDownloadReady;
     canvasDownloadReady = false;
+    return ready;
+  }
+
+  bool takeCanvasCacheClear()
+  {
+    const bool ready = canvasCacheClearReady;
+    canvasCacheClearReady = false;
     return ready;
   }
 
@@ -305,6 +313,9 @@ struct ClockwiseWebServer
       params->save();
       canvasDownloadReady = true;
       client.println("HTTP/1.1 202 Accepted\r\nConnection: close\r\n");
+    } else if (method == "POST" && path == "/canvas/clear") {
+      canvasCacheClearReady = true;
+      client.println("HTTP/1.1 202 Accepted\r\nConnection: close\r\n");
     } else if (method == "POST" && path == "/restart") {
       client.println("HTTP/1.0 204 No Content");
       force_restart = true;
@@ -344,8 +355,10 @@ struct ClockwiseWebServer
         ClockwiseParams::getInstance()->ntpServer = value;
       } else if (key == ClockwiseParams::getInstance()->PREF_CANVAS_FILE) {
         ClockwiseParams::getInstance()->canvasFile = value;
+        ClockwiseParams::getInstance()->canvasUrl = "";
       } else if (key == ClockwiseParams::getInstance()->PREF_CANVAS_SERVER) {
         ClockwiseParams::getInstance()->canvasServer = value;
+        ClockwiseParams::getInstance()->canvasUrl = "";
       } else if (key == ClockwiseParams::getInstance()->PREF_MANUAL_POSIX) {
         ClockwiseParams::getInstance()->manualPosix = value;
       } else if (key == ClockwiseParams::getInstance()->PREF_DISPLAY_ROTATION) {
