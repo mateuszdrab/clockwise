@@ -59,6 +59,9 @@ public:
 
   void appendLine(const char *message)
   {
+    char timestamped[LINE_LENGTH];
+    snprintf(timestamped, sizeof(timestamped), "[%lu ms] %s", static_cast<unsigned long>(millis()), message);
+
     Ring &buffer = ring();
     portENTER_CRITICAL(&buffer.mux);
     uint8_t index;
@@ -69,7 +72,7 @@ public:
       index = buffer.first;
       buffer.first = (buffer.first + 1) % LINE_COUNT;
     }
-    strncpy(buffer.lines[index], message, LINE_LENGTH - 1);
+    strncpy(buffer.lines[index], timestamped, LINE_LENGTH - 1);
     buffer.lines[index][LINE_LENGTH - 1] = '\0';
     portEXIT_CRITICAL(&buffer.mux);
   }
@@ -89,7 +92,7 @@ public:
     portEXIT_CRITICAL(&buffer.mux);
 
     if (count == 0) {
-      output.println("No Canvas activity recorded.");
+      output.println("No system log entries.");
       return;
     }
     for (uint8_t index = 0; index < count; ++index)
@@ -98,7 +101,7 @@ public:
 
 private:
   static const uint8_t LINE_COUNT = 16;
-  static const uint8_t LINE_LENGTH = 128;
+  static const uint8_t LINE_LENGTH = 160;
 
   struct Ring
   {
