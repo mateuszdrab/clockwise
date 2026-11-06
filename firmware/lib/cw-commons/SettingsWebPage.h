@@ -449,7 +449,7 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         if (this.readyState !== 4) return;
         const log = document.getElementById('system-log');
         const wasAtBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
-        log.textContent = this.status == 200 ? this.responseText : 'Could not load Canvas activity.';
+        log.textContent = this.status == 200 ? this.responseText : 'Could not load system log.';
         if (wasAtBottom) log.scrollTop = log.scrollHeight;
       };
       xhr.open('GET', '/logs', true);
