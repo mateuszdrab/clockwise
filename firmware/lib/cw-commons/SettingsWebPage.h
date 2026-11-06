@@ -118,7 +118,7 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
           property: "otaPassword"
         },
         {
-          title: "Automatic Brightness",
+          title: "LDR Range",
           description: "Enter the LDR readings for a dark room (minimum) and a bright room (maximum). Range: 0-4095.",
           formInput: "<input id='autoBrightMin' class='w3-input w3-light-grey w3-cell w3-margin-right' name='autoBrightMin' style='width:45%;' type='number' min='0' max='4095' placeholder='Min value' value='" + settings.autobrightmin + "'>" + 
                      "<input id='autoBrightMax' class='w3-input w3-light-grey w3-cell' name='autoBrightMax' style='width:45%;' type='number' min='0' max='4095' placeholder='Max value' value='" + settings.autobrightmax + "'>",
@@ -194,11 +194,28 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         }        
       ];
 
-      var base = document.querySelector('#base');
-      cards.forEach(c => {
+      const sections = [
+        { title: "General Settings", properties: ["use24hFormat", "timeZone", "ntpServer", "manualPosix"] },
+        { title: "Display Settings", properties: ["displayBright", "swapBlueGreen", "swapBlueRed", "displayRotation", "driver", "i2cSpeed", "E_pin"] },
+        { title: "Automatic Brightness", properties: ["autoBright", "ldrPin"] },
+        { title: "Canvas", properties: ["canvasFile", "canvasServer"] },
+        { title: "OTA Settings", properties: ["otaEnabled", "otaPassword"] }
+      ];
+      const base = document.querySelector('#base');
+      const rendered = document.createDocumentFragment();
 
-        if (!c.hasOwnProperty('exclusive') || (c.hasOwnProperty('exclusive') && c.exclusive === settings.clockface_name)) {
-          var clone = base.cloneNode(true);
+      sections.forEach(section => {
+        const sectionCards = cards.filter(c => section.properties.includes(c.property) &&
+          (!c.exclusive || c.exclusive === settings.clockface_name));
+        if (sectionCards.length === 0) return;
+
+        const divider = document.createElement("div");
+        divider.className = "w3-col s12 w3-section";
+        divider.innerHTML = "<div class='w3-border-bottom'><h3 class='w3-large'>" + section.title + "</h3></div>";
+        rendered.appendChild(divider);
+
+        sectionCards.forEach(c => {
+          const clone = base.cloneNode(true);
           clone.id = c.property + "-card";
           clone.removeAttribute("style");
 
@@ -206,14 +223,15 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
             e.id = e.id + "-" + c.property;
           });
 
-          base.before(clone);
-          document.getElementById("title-" + c.property).innerHTML = c.title
-          document.getElementById("description-" + c.property).innerHTML = c.description
-          document.getElementById("formInput-" + c.property).innerHTML = c.formInput
-          document.getElementById("icon-" + c.property).classList.add(c.icon);
-          document.getElementById("cardButton-" + c.property).setAttribute("onclick", c.save);
-        }
-      })
+          rendered.appendChild(clone);
+          clone.querySelector("#title-" + c.property).innerHTML = c.title;
+          clone.querySelector("#description-" + c.property).innerHTML = c.description;
+          clone.querySelector("#formInput-" + c.property).innerHTML = c.formInput;
+          clone.querySelector("#icon-" + c.property).classList.add(c.icon);
+          clone.querySelector("#cardButton-" + c.property).setAttribute("onclick", c.save);
+        });
+      });
+      base.before(rendered);
 
       document.getElementById("ssid").innerHTML = "<i class='fa fa-wifi'></i> " + settings.wifissid
       document.getElementById("fw-version").innerHTML = "<i class='fa fa-code-fork'></i> Firmware v" + settings.cw_fw_version
