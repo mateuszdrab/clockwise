@@ -1,6 +1,7 @@
 #pragma once
 
 #include <WiFi.h>
+#include <LittleFS.h>
 #include <CWPreferences.h>
 #include <stdlib.h>
 #include "AutoBrightnessController.h"
@@ -17,6 +18,8 @@ struct ClockwiseWebServer
 {
   String httpBuffer;
   bool force_restart;
+  bool canvasUploadReady = false;
+  bool canvasDownloadReady = false;
   const char* HEADER_TEMPLATE_D = "X-%s: %d\r\n";
   const char* HEADER_TEMPLATE_S = "X-%s: %s\r\n";
  
@@ -71,40 +74,113 @@ struct ClockwiseWebServer
     if (client)
     {
       StatusController::getInstance()->blink_led(100, 1);
+      client.setTimeout(10000);
+      String requestLine = client.readStringUntil('\n');
+      requestLine.trim();
+      const int methodEnd = requestLine.indexOf(' ');
+      const int pathEnd = requestLine.indexOf(' ', methodEnd + 1);
+      if (methodEnd < 0 || pathEnd < 0) {
+        client.println("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n");
+        client.stop();
+        return;
+      }
 
-      while (client.connected())
-      {
-        if (client.available())
-        {
-          char c = client.read();
-          httpBuffer.concat(c);
+      String method = requestLine.substring(0, methodEnd);
+      String path = requestLine.substring(methodEnd + 1, pathEnd);
+      uint32_t contentLength = 0;
+      while (client.connected()) {
+        String header = client.readStringUntil('\n');
+        header.trim();
+        if (header.length() == 0)
+          break;
+        const int separator = header.indexOf(':');
+        if (separator > 0 && header.substring(0, separator).equalsIgnoreCase("Content-Length"))
+          contentLength = header.substring(separator + 1).toInt();
+      }
 
-          if (c == '\n')
-          {
-            uint8_t method_pos = httpBuffer.indexOf(' ');
-            uint8_t path_pos = httpBuffer.indexOf(' ', method_pos + 1);
-
-            String method = httpBuffer.substring(0, method_pos);
-            String path = httpBuffer.substring(method_pos + 1, path_pos);
-            String key = "";
-            String value = "";
-
-            if (path.indexOf('?') > 0)
-            {
-              key = path.substring(path.indexOf('?') + 1, path.indexOf('='));
-              value = decodeUrlValue(path.substring(path.indexOf('=') + 1));
-              path = path.substring(0, path.indexOf('?'));
-            }
-
-            processRequest(client, method, path, key, value);
-            httpBuffer = "";
-            break;
+      String key = "";
+      String value = "";
+      if (method == "POST" && path == "/canvas/upload") {
+        receiveCanvasUpload(client, contentLength);
+      } else {
+        if (path.indexOf('?') > 0) {
+          const int queryStart = path.indexOf('?');
+          const int equals = path.indexOf('=', queryStart + 1);
+          if (equals > 0) {
+            key = path.substring(queryStart + 1, equals);
+            value = decodeUrlValue(path.substring(equals + 1));
           }
+          path = path.substring(0, queryStart);
         }
+        processRequest(client, method, path, key, value);
       }
       delay(1);
       client.stop();
     }
+  }
+
+  bool takeCanvasUpload()
+  {
+    const bool ready = canvasUploadReady;
+    canvasUploadReady = false;
+    return ready;
+  }
+
+  bool takeCanvasDownload()
+  {
+    const bool ready = canvasDownloadReady;
+    canvasDownloadReady = false;
+    return ready;
+  }
+
+  void receiveCanvasUpload(WiFiClient &client, uint32_t contentLength)
+  {
+    if (contentLength == 0 || contentLength > 32768) {
+      client.println(contentLength > 32768 ? "HTTP/1.1 413 Payload Too Large" : "HTTP/1.1 400 Empty Upload");
+      client.println("Connection: close\r\n");
+      return;
+    }
+
+    LittleFS.remove("/canvas.upload");
+    File upload = LittleFS.open("/canvas.upload", FILE_WRITE);
+    if (!upload) {
+      client.println("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n");
+      return;
+    }
+
+    uint8_t buffer[256];
+    uint32_t receivedTotal = 0;
+    bool success = true;
+    while (receivedTotal < contentLength) {
+      const int available = client.available();
+      if (available <= 0) {
+        if (!client.connected()) {
+          success = false;
+          break;
+        }
+        delay(1);
+        continue;
+      }
+      const uint32_t remaining = contentLength - receivedTotal;
+      const size_t requested = available < static_cast<int>(sizeof(buffer)) ? available : sizeof(buffer);
+      const size_t count = client.read(buffer, requested < remaining ? requested : remaining);
+      if (count == 0 || upload.write(buffer, count) != count) {
+        success = false;
+        break;
+      }
+      receivedTotal += count;
+    }
+    upload.close();
+
+    if (!success || receivedTotal != contentLength) {
+      LittleFS.remove("/canvas.upload");
+      client.println("HTTP/1.1 400 Incomplete Upload\r\nConnection: close\r\n");
+      return;
+    }
+
+    canvasDownloadReady = false;
+    canvasUploadReady = true;
+    client.println("HTTP/1.1 202 Accepted\r\nConnection: close\r\n");
   }
 
   void processRequest(WiFiClient client, String method, String path, String key, String value)
@@ -120,6 +196,13 @@ struct ClockwiseWebServer
       if (key == "pin") {
         readPin(client, key, value.toInt());
       }
+    } else if (method == "POST" && path == "/canvas/download" && key == "url") {
+      ClockwiseParams *params = ClockwiseParams::getInstance();
+      params->load();
+      params->canvasUrl = value;
+      params->save();
+      canvasDownloadReady = true;
+      client.println("HTTP/1.1 202 Accepted\r\nConnection: close\r\n");
     } else if (method == "POST" && path == "/restart") {
       client.println("HTTP/1.0 204 No Content");
       force_restart = true;
@@ -201,6 +284,7 @@ struct ClockwiseWebServer
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_DISPLAY_ABC_MAX, ClockwiseParams::getInstance()->autoBrightMax);
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_DISPLAY_ABC_LEVELS, ClockwiseParams::getInstance()->autoBrightLevels);
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_DISPLAY_ABC_FADE, ClockwiseParams::getInstance()->autoBrightFade);
+    client.printf(HEADER_TEMPLATE_S, ClockwiseParams::getInstance()->PREF_CANVAS_URL, ClockwiseParams::getInstance()->canvasUrl.c_str());
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_SWAP_BLUE_GREEN, ClockwiseParams::getInstance()->swapBlueGreen);
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_SWAP_BLUE_RED, ClockwiseParams::getInstance()->swapBlueRed);
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_USE_24H_FORMAT, ClockwiseParams::getInstance()->use24hFormat);

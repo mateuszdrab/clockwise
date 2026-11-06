@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
+#include <LittleFS.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 
 // Clockface
@@ -120,6 +121,8 @@ void setup()
   StatusController::getInstance()->blink_led(5, 100);
 
   ClockwiseParams::getInstance()->load();
+  if (!LittleFS.begin(true))
+    Serial.println("[Canvas] LittleFS mount failed; local cache and upload are unavailable");
 
   pinMode(ClockwiseParams::getInstance()->ldrPin, INPUT);
 
@@ -140,6 +143,7 @@ void setup()
 
   StatusController::getInstance()->wifiConnecting();
   wifi.begin(); // non-blocking; provisioning continues in loop()
+  clockface->setup(&cwDateTime);
 }
 
 // Runs once, as soon as Wi-Fi is up (stored credentials, Improv or AP portal).
@@ -163,7 +167,7 @@ void onNetworkReady()
       ClockwiseParams::getInstance()->use24hFormat, 
       ClockwiseParams::getInstance()->ntpServer.c_str(),
       ClockwiseParams::getInstance()->manualPosix.c_str());
-  clockface->setup(&cwDateTime);
+  clockface->onNetworkReady();
 }
 
 void loop()
@@ -176,14 +180,16 @@ void loop()
   if (wifi.isConnected())
   {
     ArduinoOTA.handle();
-    ClockwiseWebServer::getInstance()->handleHttpRequest();
+    ClockwiseWebServer *webServer = ClockwiseWebServer::getInstance();
+    webServer->handleHttpRequest();
+    if (webServer->takeCanvasDownload())
+      clockface->downloadConfiguredUrl();
+    if (webServer->takeCanvasUpload() && !clockface->loadUploadedDefinition())
+      Serial.println("[Canvas] Could not activate uploaded clockface");
     ezt::events();
   }
 
-  if (wifi.connectionSucessfulOnce)
-  {
-    clockface->update();
-  }
+  clockface->update();
 
   automaticBrightControl();
 }

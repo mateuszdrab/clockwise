@@ -28,6 +28,7 @@ struct ClockwiseParams
     const char* const PREF_NTP_SERVER = "ntpServer";
     const char* const PREF_CANVAS_FILE = "canvasFile";
     const char* const PREF_CANVAS_SERVER = "canvasServer";
+    const char* const PREF_CANVAS_URL = "canvasUrl";
     const char* const PREF_MANUAL_POSIX = "manualPosix";
     const char* const PREF_CACHED_POSIX = "cachedPosix";
     const char* const PREF_CACHED_TZ = "cachedTz";
@@ -53,6 +54,7 @@ struct ClockwiseParams
     String ntpServer;
     String canvasFile;
     String canvasServer;
+    String canvasUrl;
     String manualPosix;
     String cachedPosix;
     String cachedTz;
@@ -91,6 +93,7 @@ struct ClockwiseParams
         preferences.putString(PREF_NTP_SERVER, ntpServer);
         preferences.putString(PREF_CANVAS_FILE, canvasFile);
         preferences.putString(PREF_CANVAS_SERVER, canvasServer);
+        preferences.putString(PREF_CANVAS_URL, canvasUrl);
         preferences.putString(PREF_MANUAL_POSIX, manualPosix);
         preferences.putString(PREF_CACHED_POSIX, cachedPosix);
         preferences.putString(PREF_CACHED_TZ, cachedTz);
@@ -121,6 +124,7 @@ struct ClockwiseParams
         ntpServer = preferences.getString(PREF_NTP_SERVER, "time.google.com");
         canvasFile = preferences.getString(PREF_CANVAS_FILE, "");
         canvasServer = preferences.getString(PREF_CANVAS_SERVER, "raw.githubusercontent.com");
+        canvasUrl = preferences.getString(PREF_CANVAS_URL, "");
         manualPosix = preferences.getString(PREF_MANUAL_POSIX, "");
         cachedPosix = preferences.getString(PREF_CACHED_POSIX, "");
         cachedTz = preferences.getString(PREF_CACHED_TZ, "");

@@ -152,8 +152,28 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
           property: "autoBrightFade"
         },
         {
+          title: "Canvas URL",
+          description: "Enter a complete HTTP or HTTPS URL to a clockface JSON file. Download replaces the local cache only after valid JSON is received; it is not refreshed automatically.",
+          formInput: "<input id='canvasUrl' class='w3-input w3-light-grey' type='url' maxlength='255' placeholder='https://example.com/clockface.json' value='" + settings.canvasurl + "'>",
+          icon: "fa-link",
+          buttonText: "Download",
+          save: "downloadCanvasFromUrl()",
+          property: "canvasUrl",
+          exclusive: "cw-cf-0x07"
+        },
+        {
+          title: "Upload Canvas JSON",
+          description: "Choose a clockface JSON file up to 32 KB. A valid upload replaces the local cache and stays active until explicitly replaced.",
+          formInput: "<input id='canvasUploadFile' class='w3-input w3-light-grey' type='file' accept='.json,application/json'>",
+          icon: "fa-upload",
+          buttonText: "Upload JSON",
+          save: "uploadCanvasFile()",
+          property: "canvasUpload",
+          exclusive: "cw-cf-0x07"
+        },
+        {
           title: "Canvas Description File",
-          description: "Name of the description file to render, without the file extension.",
+          description: "Legacy source name, used only when there is no local cache or Canvas URL.",
           formInput: "<input id='descFile' class='w3-input w3-light-grey' name='descFile' type='text' placeholder='Description File' value='" + settings.canvasfile + "'>",
           icon: "fa-file-image-o",
           save: "updatePreference('canvasFile', descFile.value)",
@@ -162,7 +182,7 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         },
         {
           title: "Canvas Server Address",
-          description: "Address of the server hosting the description files. Use a local server address for testing.",
+          description: "Legacy source host, used only when there is no local cache or Canvas URL.",
           formInput: "<input id='serverAddress' class='w3-input w3-light-grey' name='serverAddress' type='text' placeholder='Canvas Server' value='" + settings.canvasserver + "'>",
           icon: "fa-server",
           save: "updatePreference('canvasServer', serverAddress.value)",
@@ -215,7 +235,7 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         { title: "General Settings", properties: ["use24hFormat", "timeZone", "ntpServer", "manualPosix"] },
         { title: "Display Settings", properties: ["displayBright", "swapBlueGreen", "swapBlueRed", "displayRotation", "driver", "i2cSpeed", "E_pin"] },
         { title: "Automatic Brightness", properties: ["autoBright", "ldrPin", "autoBrightLevels", "autoBrightFade"] },
-        { title: "Canvas", properties: ["canvasFile", "canvasServer"] },
+        { title: "Canvas", properties: ["canvasUrl", "canvasUpload", "canvasFile", "canvasServer"] },
         { title: "OTA Settings", properties: ["otaEnabled", "otaPassword"] }
       ];
       const base = document.querySelector('#base');
@@ -246,6 +266,8 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
           clone.querySelector("#formInput-" + c.property).innerHTML = c.formInput;
           clone.querySelector("#icon-" + c.property).classList.add(c.icon);
           clone.querySelector("#cardButton-" + c.property).setAttribute("onclick", c.save);
+          if (c.buttonText)
+            clone.querySelector("#cardButton-" + c.property).textContent = c.buttonText;
         });
       });
       base.before(rendered);
@@ -267,6 +289,51 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
       setTimeout(() => {
         document.getElementById('status').style.display = 'none';
       }, 2000);
+    }
+
+    function downloadCanvasFromUrl() {
+      const url = document.getElementById('canvasUrl').value.trim();
+      if (!url) return;
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function () {
+        const status = document.getElementById('status');
+        status.textContent = this.status == 202 ? 'Canvas download started; failed downloads will retry.' : 'Canvas download could not start.';
+        status.style.display = 'block';
+      };
+      xhr.open('POST', '/canvas/download?url=' + encodeURIComponent(url));
+      xhr.send();
+    }
+
+    function uploadCanvasFile() {
+      const file = document.getElementById('canvasUploadFile').files[0];
+      const status = document.getElementById('status');
+      if (!file) {
+        status.textContent = 'Choose a JSON file first.';
+        status.style.display = 'block';
+        return;
+      }
+      if (file.size > 32768) {
+        status.textContent = 'JSON files must be 32 KB or smaller.';
+        status.style.display = 'block';
+        return;
+      }
+      file.text().then(text => {
+        JSON.parse(text);
+        const xhr = new XMLHttpRequest();
+        xhr.onload = function () {
+          status.textContent = this.status == 202 ? 'Upload received; validating and activating locally.' : 'Canvas upload failed.';
+          status.style.display = 'block';
+        };
+        xhr.onerror = function () {
+          status.textContent = 'Canvas upload failed.';
+          status.style.display = 'block';
+        };
+        xhr.open('POST', '/canvas/upload');
+        xhr.send(file);
+      }).catch(() => {
+        status.textContent = 'The selected file is not valid JSON.';
+        status.style.display = 'block';
+      });
     }
 
     function splitHeaders(request) {
