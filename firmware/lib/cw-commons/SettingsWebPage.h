@@ -243,8 +243,8 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         { title: "General Settings", properties: ["use24hFormat", "timeZone", "ntpServer", "manualPosix"] },
         { title: "Display Settings", properties: ["displayBright", "swapBlueGreen", "swapBlueRed", "displayRotation", "driver", "i2cSpeed", "E_pin"] },
         { title: "Automatic Brightness", properties: ["autoBright", "ldrPin", "autoBrightLevels", "autoBrightFade"] },
-        { title: "Wi-Fi Settings", properties: ["wifiAutoConfig"] },
         { title: "Canvas", properties: ["canvasUrl", "canvasUpload", "canvasFile", "canvasServer"] },
+        { title: "Wi-Fi Settings", properties: ["wifiAutoConfig"] },
         { title: "OTA Settings", properties: ["otaEnabled", "otaPassword"] }
       ];
       const base = document.querySelector('#base');
