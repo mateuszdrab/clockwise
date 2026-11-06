@@ -119,7 +119,7 @@ void displaySetup(bool swapBlueGreen, bool swapBlueRed, uint8_t displayBright, u
   dma_display->setRotation(displayRotation);
 }
 
-// Feed the controller every 40 ms, advance the fade each loop, and log diagnostics once per second.
+// Feed the controller every 100 ms, advance the fade each loop, and log diagnostics once per second.
 void automaticBrightControl()
 {
   ClockwiseParams *params = ClockwiseParams::getInstance();
@@ -131,7 +131,7 @@ void automaticBrightControl()
   controller.configure(params->autoBrightMin, params->autoBrightMax, params->autoBrightLevels, params->autoBrightFade);
 
   const uint32_t now = millis();
-  if (now - autoBrightSampleMillis >= 40) {
+  if (now - autoBrightSampleMillis >= 100) {
     autoBrightSampleMillis = now;
     lastLdrReading = analogRead(params->ldrPin);
     controller.addSample(lastLdrReading, params->displayBright);
@@ -170,7 +170,7 @@ void setup()
   displaySetup(ClockwiseParams::getInstance()->swapBlueGreen, ClockwiseParams::getInstance()->swapBlueRed, ClockwiseParams::getInstance()->displayBright, ClockwiseParams::getInstance()->displayRotation, driver, i2cSpeed, E_pin);
   cw::AutoBrightnessController::instance().begin(ClockwiseParams::getInstance()->displayBright, millis());
   lastAppliedBrightness = ClockwiseParams::getInstance()->displayBright;
-  autoBrightSampleMillis = millis() - 40;
+  autoBrightSampleMillis = millis() - 100;
   clockface = new Clockface(dma_display);
 
   autoBrightEnabled = (ClockwiseParams::getInstance()->autoBrightMax > 0);

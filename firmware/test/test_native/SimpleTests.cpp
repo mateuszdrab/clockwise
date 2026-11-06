@@ -23,17 +23,35 @@ void test_auto_brightness_median_rejects_single_spike(void) {
   controller.addSample(4095, 255);
   controller.addSample(990, 255);
   controller.addSample(1005, 255);
+  controller.addSample(998, 255);
+  controller.addSample(1002, 255);
+  controller.addSample(1004, 255);
+  controller.addSample(997, 255);
 
   TEST_ASSERT_TRUE(controller.filteredSensor() >= 1000);
   TEST_ASSERT_TRUE(controller.filteredSensor() <= 1010);
   TEST_ASSERT_TRUE(controller.level() > 0);
 }
 
+void test_auto_brightness_ema_smooths_sustained_light_change(void) {
+  cw::AutoBrightnessController &controller = cw::AutoBrightnessController::instance();
+  controller.begin(32, 0);
+  controller.configure(0, 4095, 16, 40);
+
+  for (uint8_t i = 0; i < 9; ++i)
+    controller.addSample(1000, 255);
+  for (uint8_t i = 0; i < 9; ++i)
+    controller.addSample(2000, 255);
+
+  TEST_ASSERT_TRUE(controller.filteredSensor() > 1000);
+  TEST_ASSERT_TRUE(controller.filteredSensor() < 1300);
+}
+
 void test_auto_brightness_fades_in_bounded_steps(void) {
   cw::AutoBrightnessController &controller = cw::AutoBrightnessController::instance();
   controller.begin(10, 0);
   controller.configure(0, 1000, 16, 20);
-  for (uint8_t i = 0; i < 5; ++i)
+  for (uint8_t i = 0; i < 9; ++i)
     controller.addSample(1000, 255);
 
   TEST_ASSERT_EQUAL_UINT8(255, controller.targetBrightness());
@@ -50,6 +68,7 @@ int runUnityTests(void) {
   UNITY_BEGIN();
   RUN_TEST(test_function_should_be_true);
   RUN_TEST(test_auto_brightness_median_rejects_single_spike);
+  RUN_TEST(test_auto_brightness_ema_smooths_sustained_light_change);
   RUN_TEST(test_auto_brightness_fades_in_bounded_steps);
   run_wifi_setup_state_machine_tests();
   return UNITY_END();

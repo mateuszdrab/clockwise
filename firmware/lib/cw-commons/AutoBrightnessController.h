@@ -4,8 +4,8 @@
 
 namespace cw {
 
-// Ambient brightness pipeline: take the median of the latest five ADC samples,
-// then smooth each median with a fixed-point 1/8 EMA before mapping it to a target.
+// Ambient brightness pipeline: take the median of the latest nine ADC samples,
+// then smooth each median with a fixed-point 1/32 EMA before mapping it to a target.
 // Level 0 means off; lit levels range from 1 to `levels`. Counts are bounded to
 // 2..256 (the settings UI presets are 10, 16, 32, 64, and 256). `fadeRate` is
 // brightness counts per second; zero applies the target immediately.
@@ -43,16 +43,16 @@ public:
     bool addSample(uint16_t reading, uint8_t maxBrightness)
     {
         samples_[sampleIndex_] = reading;
-        sampleIndex_ = (sampleIndex_ + 1) % 5;
-        if (sampleCount_ < 5)
+        sampleIndex_ = (sampleIndex_ + 1) % SENSOR_SAMPLE_COUNT;
+        if (sampleCount_ < SENSOR_SAMPLE_COUNT)
             ++sampleCount_;
-        if (sampleCount_ < 5)
+        if (sampleCount_ < SENSOR_SAMPLE_COUNT)
             return false;
 
-        uint16_t ordered[5];
-        for (uint8_t i = 0; i < 5; ++i)
+        uint16_t ordered[SENSOR_SAMPLE_COUNT];
+        for (uint8_t i = 0; i < SENSOR_SAMPLE_COUNT; ++i)
             ordered[i] = samples_[i];
-        for (uint8_t i = 1; i < 5; ++i) {
+        for (uint8_t i = 1; i < SENSOR_SAMPLE_COUNT; ++i) {
             uint16_t value = ordered[i];
             int8_t j = i - 1;
             while (j >= 0 && ordered[j] > value) {
@@ -62,12 +62,12 @@ public:
             ordered[j + 1] = value;
         }
 
-        const int32_t medianQ8 = static_cast<int32_t>(ordered[2]) << 8;
+        const int32_t medianQ8 = static_cast<int32_t>(ordered[SENSOR_SAMPLE_COUNT / 2]) << 8;
         if (!filterInitialized_) {
             filteredSensorQ8_ = medianQ8;
             filterInitialized_ = true;
         } else {
-            filteredSensorQ8_ += (medianQ8 - filteredSensorQ8_) / 8;
+            filteredSensorQ8_ += (medianQ8 - filteredSensorQ8_) / 32;
         }
         updateTarget(maxBrightness);
         return true;
@@ -123,13 +123,15 @@ public:
     uint8_t targetBrightness() const { return targetBrightness_; }
 
 private:
+    enum { SENSOR_SAMPLE_COUNT = 9 };
+
     AutoBrightnessController()
         : sensorMin_(0), sensorMax_(0), levels_(16), fadeRate_(40), currentBrightness_(0),
           targetBrightness_(0), targetLevel_(0), filteredSensorQ8_(0), sampleCount_(0),
           sampleIndex_(0), filterInitialized_(false), lastRampMillis_(0), fadeRemainder_(0),
           lastDirection_(0)
     {
-        for (uint8_t i = 0; i < 5; ++i)
+        for (uint8_t i = 0; i < SENSOR_SAMPLE_COUNT; ++i)
             samples_[i] = 0;
     }
 
@@ -171,7 +173,7 @@ private:
     uint8_t targetBrightness_;
     uint16_t targetLevel_;
     int32_t filteredSensorQ8_;
-    uint16_t samples_[5];
+    uint16_t samples_[SENSOR_SAMPLE_COUNT];
     uint8_t sampleCount_;
     uint8_t sampleIndex_;
     bool filterInitialized_;
