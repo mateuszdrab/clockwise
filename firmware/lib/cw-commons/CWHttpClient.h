@@ -26,18 +26,18 @@ struct ClockwiseHttpClient
     const int query = logUrl.indexOf('?');
     if (query >= 0)
       logUrl.remove(query);
-    CanvasLog::instance().logf("[Canvas] Request: %s", logUrl.c_str());
+    SystemLog::instance().logf("[Canvas] Request: %s", logUrl.c_str());
 
     const int schemeEnd = requestUrl.indexOf("://");
     if (schemeEnd < 0) {
-      CanvasLog::instance().logf("[Canvas] Invalid URL: missing scheme");
+      SystemLog::instance().logf("[Canvas] Invalid URL: missing scheme");
       return false;
     }
     String scheme = requestUrl.substring(0, schemeEnd);
     scheme.toLowerCase();
     const bool secure = scheme == "https";
     if (!secure && scheme != "http") {
-      CanvasLog::instance().logf("[Canvas] Unsupported URL scheme: %s", scheme.c_str());
+      SystemLog::instance().logf("[Canvas] Unsupported URL scheme: %s", scheme.c_str());
       return false;
     }
 
@@ -73,7 +73,7 @@ struct ClockwiseHttpClient
     }
     client->setTimeout(10000);
     if (!client->connect(host.c_str(), port)) {
-      CanvasLog::instance().logf("[Canvas] Connect failed: %s", url.c_str());
+      SystemLog::instance().logf("[Canvas] Connect failed: %s", url.c_str());
       return false;
     }
 
@@ -88,7 +88,7 @@ struct ClockwiseHttpClient
     const int firstSpace = status.indexOf(' ');
     const int statusCode = firstSpace < 0 ? 0 : status.substring(firstSpace + 1, firstSpace + 4).toInt();
     if (statusCode != 200 && statusCode != 301 && statusCode != 302 && statusCode != 303 && statusCode != 307 && statusCode != 308) {
-      CanvasLog::instance().logf("[Canvas] Unexpected HTTP status: %s", status.c_str());
+      SystemLog::instance().logf("[Canvas] Unexpected HTTP status: %s", status.c_str());
       client->stop();
       return false;
     }
@@ -120,11 +120,11 @@ struct ClockwiseHttpClient
     if (statusCode != 200) {
       client->stop();
       if (redirectLocation.isEmpty()) {
-        CanvasLog::instance().logf("[Canvas] HTTP %d redirect from %s has no Location header", statusCode, logUrl.c_str());
+        SystemLog::instance().logf("[Canvas] HTTP %d redirect from %s has no Location header", statusCode, logUrl.c_str());
         return false;
       }
       if (redirectCount >= 3) {
-        CanvasLog::instance().logf("[Canvas] Redirect limit reached (HTTP %d from %s)", statusCode, logUrl.c_str());
+        SystemLog::instance().logf("[Canvas] Redirect limit reached (HTTP %d from %s)", statusCode, logUrl.c_str());
         return false;
       }
 
@@ -137,14 +137,14 @@ struct ClockwiseHttpClient
         const int lastSlash = requestUrl.lastIndexOf('/');
         redirectedUrl = requestUrl.substring(0, lastSlash + 1) + redirectedUrl;
       }
-      CanvasLog::instance().logf("[Canvas] Following HTTP %d redirect to %s", statusCode, redirectedUrl.c_str());
+      SystemLog::instance().logf("[Canvas] Following HTTP %d redirect to %s", statusCode, redirectedUrl.c_str());
       return getToFile(redirectedUrl, output, redirectCount + 1);
     }
 
     uint32_t written = 0;
     bool success;
     if (contentLength > static_cast<int32_t>(MAX_CANVAS_BYTES)) {
-      CanvasLog::instance().logf("[Canvas] Response too large: %ld bytes", static_cast<long>(contentLength));
+      SystemLog::instance().logf("[Canvas] Response too large: %ld bytes", static_cast<long>(contentLength));
       success = false;
     }
     else if (chunked)
@@ -155,7 +155,7 @@ struct ClockwiseHttpClient
       success = copyUntilClose(*client, output, written);
 
     client->stop();
-    CanvasLog::instance().logf(success && written > 0 ? "[Canvas] Received %lu bytes" : "[Canvas] Response transfer failed after %lu bytes", static_cast<unsigned long>(written));
+    SystemLog::instance().logf(success && written > 0 ? "[Canvas] Received %lu bytes" : "[Canvas] Response transfer failed after %lu bytes", static_cast<unsigned long>(written));
     return success && written > 0;
   }
 
