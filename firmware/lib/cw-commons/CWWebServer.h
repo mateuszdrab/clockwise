@@ -9,6 +9,10 @@
 #include "StatusController.h"
 #include "SettingsWebPage.h"
 
+extern bool otaInProgress;
+extern bool otaRestartPending;
+extern uint32_t otaRestartAtMillis;
+
 #ifndef CLOCKFACE_NAME
   #define CLOCKFACE_NAME "UNKNOWN"
 #endif
@@ -227,6 +231,7 @@ struct ClockwiseWebServer
       return;
     }
 
+    otaInProgress = true;
     StatusController::getInstance()->otaUpdateStarted();
     uint8_t buffer[1024];
     uint32_t receivedTotal = 0;
@@ -266,6 +271,9 @@ struct ClockwiseWebServer
       Update.abort();
       StatusController::getInstance()->otaUpdateFailed(error);
       client.println("HTTP/1.1 400 Firmware Update Failed\r\nConnection: close\r\n");
+      client.flush();
+      otaRestartPending = true;
+      otaRestartAtMillis = millis() + 2000;
       return;
     }
 
@@ -273,7 +281,8 @@ struct ClockwiseWebServer
     client.println("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: close\r\n");
     client.println("Firmware verified; restarting");
     client.flush();
-    force_restart = true;
+    otaRestartPending = true;
+    otaRestartAtMillis = millis() + 2000;
   }
 
   void processRequest(WiFiClient client, String method, String path, String key, String value)

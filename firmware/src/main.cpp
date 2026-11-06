@@ -28,6 +28,8 @@ uint32_t autoBrightDebugMillis = 0;
 uint16_t lastLdrReading = 0;
 uint8_t lastAppliedBrightness = 0;
 bool otaInProgress = false;
+bool otaRestartPending = false;
+uint32_t otaRestartAtMillis = 0;
 int lastOtaPercent = -1;
 
 void setupOtaDisplayCallbacks()
@@ -52,9 +54,14 @@ void setupOtaDisplayCallbacks()
         Serial.println("[OTA] Update complete; restarting");
       })
       .onError([](ota_error_t error) {
-        otaInProgress = false;
         StatusController::getInstance()->otaUpdateFailed(static_cast<uint8_t>(error));
         Serial.printf("[OTA] Update failed with error %u\n", static_cast<uint8_t>(error));
+        if (otaInProgress) {
+          otaRestartPending = true;
+          otaRestartAtMillis = millis() + 2000;
+        } else {
+          otaInProgress = false;
+        }
       });
 }
 
@@ -225,5 +232,9 @@ void loop()
   if (!otaInProgress) {
     clockface->update();
     automaticBrightControl();
+  }
+
+  if (otaRestartPending && static_cast<int32_t>(millis() - otaRestartAtMillis) >= 0) {
+    ESP.restart();
   }
 }
