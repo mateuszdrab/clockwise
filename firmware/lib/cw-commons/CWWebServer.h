@@ -2,6 +2,7 @@
 
 #include <WiFi.h>
 #include <CWPreferences.h>
+#include <stdlib.h>
 #include "StatusController.h"
 #include "SettingsWebPage.h"
 
@@ -35,6 +36,30 @@ struct ClockwiseWebServer
     server.stop();
   }
 
+  String decodeUrlValue(const String &value)
+  {
+    String decoded;
+    decoded.reserve(value.length());
+    for (unsigned int index = 0; index < value.length(); index++)
+    {
+      if (value[index] == '%' && index + 2 < value.length())
+      {
+        char hex[3] = {value[index + 1], value[index + 2], '\0'};
+        decoded += (char)strtol(hex, nullptr, 16);
+        index += 2;
+      }
+      else if (value[index] == '+')
+      {
+        decoded += ' ';
+      }
+      else
+      {
+        decoded += value[index];
+      }
+    }
+    return decoded;
+  }
+
   void handleHttpRequest()
   {
     if (force_restart)
@@ -66,7 +91,7 @@ struct ClockwiseWebServer
             if (path.indexOf('?') > 0)
             {
               key = path.substring(path.indexOf('?') + 1, path.indexOf('='));
-              value = path.substring(path.indexOf('=') + 1);
+              value = decodeUrlValue(path.substring(path.indexOf('=') + 1));
               path = path.substring(0, path.indexOf('?'));
             }
 
@@ -106,6 +131,10 @@ struct ClockwiseWebServer
         ClockwiseParams::getInstance()->wifiSsid = value;
       } else if (key == ClockwiseParams::getInstance()->PREF_WIFI_PASSWORD) {
         ClockwiseParams::getInstance()->wifiPwd = value;
+      } else if (key == ClockwiseParams::getInstance()->PREF_OTA_ENABLED) {
+        ClockwiseParams::getInstance()->otaEnabled = (value == "1");
+      } else if (key == ClockwiseParams::getInstance()->PREF_OTA_PASSWORD) {
+        ClockwiseParams::getInstance()->otaPassword = value;
       } else if (key == "autoBright") {   //autoBright=0010,0800
         ClockwiseParams::getInstance()->autoBrightMin = value.substring(0,4).toInt();
         ClockwiseParams::getInstance()->autoBrightMax = value.substring(5,9).toInt();
@@ -167,6 +196,7 @@ struct ClockwiseWebServer
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_LDR_PIN, ClockwiseParams::getInstance()->ldrPin);    
     client.printf(HEADER_TEMPLATE_S, ClockwiseParams::getInstance()->PREF_TIME_ZONE, ClockwiseParams::getInstance()->timeZone.c_str());
     client.printf(HEADER_TEMPLATE_S, ClockwiseParams::getInstance()->PREF_WIFI_SSID, ClockwiseParams::getInstance()->wifiSsid.c_str());
+    client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_OTA_ENABLED, ClockwiseParams::getInstance()->otaEnabled);
     client.printf(HEADER_TEMPLATE_S, ClockwiseParams::getInstance()->PREF_NTP_SERVER, ClockwiseParams::getInstance()->ntpServer.c_str());
     client.printf(HEADER_TEMPLATE_S, ClockwiseParams::getInstance()->PREF_CANVAS_FILE, ClockwiseParams::getInstance()->canvasFile.c_str());
     client.printf(HEADER_TEMPLATE_S, ClockwiseParams::getInstance()->PREF_CANVAS_SERVER, ClockwiseParams::getInstance()->canvasServer.c_str());

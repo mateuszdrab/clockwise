@@ -21,6 +21,8 @@ struct ClockwiseParams
     const char* const PREF_TIME_ZONE = "timeZone";
     const char* const PREF_WIFI_SSID = "wifiSsid";
     const char* const PREF_WIFI_PASSWORD = "wifiPwd";
+    const char* const PREF_OTA_ENABLED = "otaEnabled";
+    const char* const PREF_OTA_PASSWORD = "otaPassword";
     const char* const PREF_NTP_SERVER = "ntpServer";
     const char* const PREF_CANVAS_FILE = "canvasFile";
     const char* const PREF_CANVAS_SERVER = "canvasServer";
@@ -42,6 +44,8 @@ struct ClockwiseParams
     String timeZone;
     String wifiSsid;
     String wifiPwd;
+    bool otaEnabled;
+    String otaPassword;    
     String ntpServer;
     String canvasFile;
     String canvasServer;
@@ -76,6 +80,8 @@ struct ClockwiseParams
         preferences.putString(PREF_TIME_ZONE, timeZone);
         preferences.putString(PREF_WIFI_SSID, wifiSsid);
         preferences.putString(PREF_WIFI_PASSWORD, wifiPwd);
+        preferences.putBool(PREF_OTA_ENABLED, otaEnabled);
+        preferences.putString(PREF_OTA_PASSWORD, otaPassword);
         preferences.putString(PREF_NTP_SERVER, ntpServer);
         preferences.putString(PREF_CANVAS_FILE, canvasFile);
         preferences.putString(PREF_CANVAS_SERVER, canvasServer);
@@ -100,6 +106,8 @@ struct ClockwiseParams
         timeZone = preferences.getString(PREF_TIME_ZONE, "America/Sao_Paulo");
         wifiSsid = preferences.getString(PREF_WIFI_SSID, "");
         wifiPwd = preferences.getString(PREF_WIFI_PASSWORD, "");
+        otaEnabled = preferences.getBool(PREF_OTA_ENABLED, false);
+        otaPassword = preferences.getString(PREF_OTA_PASSWORD, "");
         ntpServer = preferences.getString(PREF_NTP_SERVER, "time.google.com");
         canvasFile = preferences.getString(PREF_CANVAS_FILE, "");
         canvasServer = preferences.getString(PREF_CANVAS_SERVER, "raw.githubusercontent.com");

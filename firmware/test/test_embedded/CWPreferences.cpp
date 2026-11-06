@@ -22,6 +22,8 @@ void test_function_should_get_default_values(void) {
   TEST_ASSERT_EQUAL_STRING(NTP_SERVER, ClockwiseParams::getInstance()->ntpServer.c_str());
   TEST_ASSERT_EQUAL(32, ClockwiseParams::getInstance()->displayBright);
   TEST_ASSERT_EQUAL(true, ClockwiseParams::getInstance()->use24hFormat);
+  TEST_ASSERT_EQUAL(true, ClockwiseParams::getInstance()->otaEnabled);
+  TEST_ASSERT_EQUAL_STRING("", ClockwiseParams::getInstance()->otaPassword.c_str());
 }
 
 int runUnityTests(void) {

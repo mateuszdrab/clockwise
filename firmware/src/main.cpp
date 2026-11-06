@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ArduinoOTA.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 
 // Clockface
@@ -138,6 +139,19 @@ void setup()
 // Runs once, as soon as Wi-Fi is up (stored credentials, Improv or AP portal).
 void onNetworkReady()
 {
+  ClockwiseParams *params = ClockwiseParams::getInstance();
+  if (params->otaEnabled)
+  {
+    if (!params->otaPassword.isEmpty())
+      ArduinoOTA.setPassword(params->otaPassword.c_str());
+    ArduinoOTA.begin();
+    Serial.println("[OTA] Ready for wireless updates");
+  }
+  else
+  {
+    Serial.println("[OTA] Disabled in settings");
+  }
+
   StatusController::getInstance()->ntpConnecting();
   cwDateTime.begin(ClockwiseParams::getInstance()->timeZone.c_str(), 
       ClockwiseParams::getInstance()->use24hFormat, 
@@ -155,6 +169,7 @@ void loop()
 
   if (wifi.isConnected())
   {
+    ArduinoOTA.handle();
     ClockwiseWebServer::getInstance()->handleHttpRequest();
     ezt::events();
   }

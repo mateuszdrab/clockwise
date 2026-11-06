@@ -102,6 +102,22 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
           property: "ntpServer"
         },
         {
+          title: "Arduino OTA",
+          description: "Allow firmware updates over Wi-Fi. Changes take effect after restart.",
+          formInput: "<input class='w3-check' type='checkbox' id='otaEnabled' " + (settings.otaenabled == '1' ? "checked" : "") + "><label for='otaEnabled'> Enabled</label>",
+          icon: "fa-wifi",
+          save: "updatePreference('otaEnabled', Number(otaEnabled.checked))",
+          property: "otaEnabled"
+        },
+        {
+          title: "Arduino OTA Password",
+          description: "Set the password required for OTA uploads. Leave blank to keep the current password, or select Clear password to remove it. Changes take effect after restart.",
+          formInput: "<input id='otaPassword' class='w3-input w3-light-grey' type='password' maxlength='64' autocomplete='new-password' placeholder='New OTA password'><label><input class='w3-check' type='checkbox' id='clearOtaPassword'> Clear password</label>",
+          icon: "fa-lock",
+          save: "if (otaPassword.value !== '') updatePreference('otaPassword', encodeURIComponent(otaPassword.value)); else if (clearOtaPassword.checked) updatePreference('otaPassword', '')",
+          property: "otaPassword"
+        },
+        {
           title: "Automatic Bright",
           description: "Inform the values read by the LDR when the room is dark (min value) and bright (max value). Range 0 - 4095",
           formInput: "<input id='autoBrightMin' class='w3-input w3-light-grey w3-cell w3-margin-right' name='autoBrightMin' style='width:45%;' type='number' min='0' max='4095' placeholder='Min value' value='" + settings.autobrightmin + "'>" + 
