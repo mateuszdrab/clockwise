@@ -17,6 +17,8 @@ struct ClockwiseParams
     const char* const PREF_DISPLAY_BRIGHT = "displayBright";
     const char* const PREF_DISPLAY_ABC_MIN = "autoBrightMin";
     const char* const PREF_DISPLAY_ABC_MAX = "autoBrightMax";
+    const char* const PREF_DISPLAY_ABC_LEVELS = "autoBrightLevels";
+    const char* const PREF_DISPLAY_ABC_FADE = "autoBrightFade";
     const char* const PREF_LDR_PIN = "ldrPin";
     const char* const PREF_TIME_ZONE = "timeZone";
     const char* const PREF_WIFI_SSID = "wifiSsid";
@@ -40,6 +42,8 @@ struct ClockwiseParams
     uint8_t displayBright;
     uint16_t autoBrightMin;
     uint16_t autoBrightMax;
+    uint16_t autoBrightLevels;
+    uint16_t autoBrightFade;
     uint8_t ldrPin;
     String timeZone;
     String wifiSsid;
@@ -76,6 +80,8 @@ struct ClockwiseParams
         preferences.putUInt(PREF_DISPLAY_BRIGHT, displayBright);
         preferences.putUInt(PREF_DISPLAY_ABC_MIN, autoBrightMin);
         preferences.putUInt(PREF_DISPLAY_ABC_MAX, autoBrightMax);
+        preferences.putUInt(PREF_DISPLAY_ABC_LEVELS, autoBrightLevels);
+        preferences.putUInt(PREF_DISPLAY_ABC_FADE, autoBrightFade);
         preferences.putUInt(PREF_LDR_PIN, ldrPin);        
         preferences.putString(PREF_TIME_ZONE, timeZone);
         preferences.putString(PREF_WIFI_SSID, wifiSsid);
@@ -100,8 +106,12 @@ struct ClockwiseParams
         swapBlueRed = preferences.getBool(PREF_SWAP_BLUE_RED, false);
         use24hFormat = preferences.getBool(PREF_USE_24H_FORMAT, true);
         displayBright = preferences.getUInt(PREF_DISPLAY_BRIGHT, 32);
+        // A valid sensor range enables auto brightness; defaults keep it disabled.
         autoBrightMin = preferences.getUInt(PREF_DISPLAY_ABC_MIN, 0);
         autoBrightMax = preferences.getUInt(PREF_DISPLAY_ABC_MAX, 0);
+        // Default to 16 target levels with a 40-count-per-second fade.
+        autoBrightLevels = preferences.getUInt(PREF_DISPLAY_ABC_LEVELS, 16);
+        autoBrightFade = preferences.getUInt(PREF_DISPLAY_ABC_FADE, 40);
         ldrPin = preferences.getUInt(PREF_LDR_PIN, 35);        
         timeZone = preferences.getString(PREF_TIME_ZONE, "America/Sao_Paulo");
         wifiSsid = preferences.getString(PREF_WIFI_SSID, "");

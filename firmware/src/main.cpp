@@ -10,9 +10,7 @@
 #include <CWPreferences.h>
 #include <CWWebServer.h>
 #include <StatusController.h>
-
-#define MIN_BRIGHT_DISPLAY_ON 4
-#define MIN_BRIGHT_DISPLAY_OFF 0
+#include <AutoBrightnessController.h>
 
 #define ESP32_LED_BUILTIN 2
 
@@ -24,8 +22,10 @@ WiFiController wifi;
 CWDateTime cwDateTime;
 
 bool autoBrightEnabled;
-long autoBrightMillis = 0;
-uint8_t currentBrightSlot = -1;
+uint32_t autoBrightSampleMillis = 0;
+uint32_t autoBrightDebugMillis = 0;
+uint16_t lastLdrReading = 0;
+uint8_t lastAppliedBrightness = 0;
 
 bool isValidI2SSpeed(uint32_t speed) {
   return speed == 8000000 || speed == 16000000 || speed == 20000000;
@@ -81,31 +81,34 @@ void displaySetup(bool swapBlueGreen, bool swapBlueRed, uint8_t displayBright, u
   dma_display->setRotation(displayRotation);
 }
 
+// Feed the controller every 40 ms, advance the fade each loop, and log diagnostics once per second.
 void automaticBrightControl()
 {
-  if (autoBrightEnabled) {
-    if (millis() - autoBrightMillis > 3000)
-    {
-      int16_t currentValue = analogRead(ClockwiseParams::getInstance()->ldrPin);
+  ClockwiseParams *params = ClockwiseParams::getInstance();
+  autoBrightEnabled = params->autoBrightMax > params->autoBrightMin;
+  if (!autoBrightEnabled)
+    return;
 
-      uint16_t ldrMin = ClockwiseParams::getInstance()->autoBrightMin;
-      uint16_t ldrMax = ClockwiseParams::getInstance()->autoBrightMax;
+  cw::AutoBrightnessController &controller = cw::AutoBrightnessController::instance();
+  controller.configure(params->autoBrightMin, params->autoBrightMax, params->autoBrightLevels, params->autoBrightFade);
 
-      const uint8_t minBright = (currentValue < ldrMin ? MIN_BRIGHT_DISPLAY_OFF : MIN_BRIGHT_DISPLAY_ON);
-      uint8_t maxBright = ClockwiseParams::getInstance()->displayBright;
+  const uint32_t now = millis();
+  if (now - autoBrightSampleMillis >= 40) {
+    autoBrightSampleMillis = now;
+    lastLdrReading = analogRead(params->ldrPin);
+    controller.addSample(lastLdrReading, params->displayBright);
+  }
 
-      uint8_t slots = 10; //10 slots
-      uint8_t mapLDR = map(currentValue > ldrMax ? ldrMax : currentValue, ldrMin, ldrMax, 1, slots);
-      uint8_t mapBright = map(mapLDR, 1, slots, minBright, maxBright);
+  const uint8_t brightness = controller.advance(now);
+  if (brightness != lastAppliedBrightness) {
+    dma_display->setBrightness8(brightness);
+    lastAppliedBrightness = brightness;
+  }
 
-      // Serial.printf("LDR: %d, mapLDR: %d, Bright: %d\n", currentValue, mapLDR, mapBright);
-      if(abs(currentBrightSlot - mapLDR ) >= 2 || mapBright == 0){
-           dma_display->setBrightness8(mapBright);
-           currentBrightSlot=mapLDR;
-          //  Serial.printf("setBrightness: %d , Update currentBrightSlot to %d\n", mapBright, mapLDR);
-      }
-      autoBrightMillis = millis();
-    }
+  if (now - autoBrightDebugMillis >= 1000) {
+    autoBrightDebugMillis = now;
+    Serial.printf("[AutoBright] ADC: %u, level: %u/%u, target: %u, brightness: %u\n",
+        lastLdrReading, controller.level(), controller.levels(), controller.targetBrightness(), brightness);
   }
 }
 
@@ -125,6 +128,9 @@ void setup()
   uint8_t E_pin = ClockwiseParams::getInstance()->E_pin;
   
   displaySetup(ClockwiseParams::getInstance()->swapBlueGreen, ClockwiseParams::getInstance()->swapBlueRed, ClockwiseParams::getInstance()->displayBright, ClockwiseParams::getInstance()->displayRotation, driver, i2cSpeed, E_pin);
+  cw::AutoBrightnessController::instance().begin(ClockwiseParams::getInstance()->displayBright, millis());
+  lastAppliedBrightness = ClockwiseParams::getInstance()->displayBright;
+  autoBrightSampleMillis = millis() - 40;
   clockface = new Clockface(dma_display);
 
   autoBrightEnabled = (ClockwiseParams::getInstance()->autoBrightMax > 0);

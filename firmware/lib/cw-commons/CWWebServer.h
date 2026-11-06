@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <CWPreferences.h>
 #include <stdlib.h>
+#include "AutoBrightnessController.h"
 #include "StatusController.h"
 #include "SettingsWebPage.h"
 
@@ -138,6 +139,10 @@ struct ClockwiseWebServer
       } else if (key == "autoBright") {   //autoBright=0010,0800
         ClockwiseParams::getInstance()->autoBrightMin = value.substring(0,4).toInt();
         ClockwiseParams::getInstance()->autoBrightMax = value.substring(5,9).toInt();
+      } else if (key == ClockwiseParams::getInstance()->PREF_DISPLAY_ABC_LEVELS) {
+        ClockwiseParams::getInstance()->autoBrightLevels = value.toInt();
+      } else if (key == ClockwiseParams::getInstance()->PREF_DISPLAY_ABC_FADE) {
+        ClockwiseParams::getInstance()->autoBrightFade = value.toInt();
       } else if (key == ClockwiseParams::getInstance()->PREF_SWAP_BLUE_GREEN) {
         ClockwiseParams::getInstance()->swapBlueGreen = (value == "1");
       } else if (key == ClockwiseParams::getInstance()->PREF_SWAP_BLUE_RED) {
@@ -171,12 +176,16 @@ struct ClockwiseWebServer
   }
 
 
-
+  // Return the live ADC reading alongside the filtered level and applied/target brightness.
   void readPin(WiFiClient client, String key, uint16_t pin) {
     ClockwiseParams::getInstance()->load();
 
     client.println("HTTP/1.0 204 No Content");
     client.printf(HEADER_TEMPLATE_D, key, analogRead(pin));
+    client.printf(HEADER_TEMPLATE_D, "level", cw::AutoBrightnessController::instance().level());
+    client.printf(HEADER_TEMPLATE_D, "levels", cw::AutoBrightnessController::instance().levels());
+    client.printf(HEADER_TEMPLATE_D, "brightness", cw::AutoBrightnessController::instance().brightness());
+    client.printf(HEADER_TEMPLATE_D, "target", cw::AutoBrightnessController::instance().targetBrightness());
     
     client.println();
   }
@@ -190,6 +199,8 @@ struct ClockwiseWebServer
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_DISPLAY_BRIGHT, ClockwiseParams::getInstance()->displayBright);
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_DISPLAY_ABC_MIN, ClockwiseParams::getInstance()->autoBrightMin);
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_DISPLAY_ABC_MAX, ClockwiseParams::getInstance()->autoBrightMax);
+    client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_DISPLAY_ABC_LEVELS, ClockwiseParams::getInstance()->autoBrightLevels);
+    client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_DISPLAY_ABC_FADE, ClockwiseParams::getInstance()->autoBrightFade);
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_SWAP_BLUE_GREEN, ClockwiseParams::getInstance()->swapBlueGreen);
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_SWAP_BLUE_RED, ClockwiseParams::getInstance()->swapBlueRed);
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_USE_24H_FORMAT, ClockwiseParams::getInstance()->use24hFormat);

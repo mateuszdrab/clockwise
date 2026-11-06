@@ -128,11 +128,28 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         },
         {
           title: "LDR Pin",
-          description: "The GPIO pin where the LDR is connected to. Use just the numeric value (default: 35) | <a href='#' onclick='readPin(ldrPin.value);'>Read Pin: </a><strong id='ldrPinRead'>0</strong>",
+          description: "The GPIO pin where the LDR is connected to. Use just the numeric value (default: 35) | <a href='#' onclick='readPin(ldrPin.value);'>Read Pin: </a><strong id='ldrPinRead'>0</strong> | Level: <strong id='ldrLevelRead'>0</strong> | Brightness: <strong id='ldrBrightnessRead'>0</strong> (target <strong id='ldrTargetRead'>0</strong>)",
           formInput: "<input id='ldrPin' class='w3-input w3-light-grey' name='ldrPin' type='number' min='0' max='39' value='" + settings.ldrpin + "'>",
           icon: "fa-microchip",
           save: "updatePreference('ldrPin', ldrPin.value)",
           property: "ldrPin"
+        },
+        {
+          title: "Automatic Brightness Levels",
+          description: "Choose how many target brightness levels the sensor uses. Fade interpolates smoothly between targets.",
+          // Presets only; the controller also accepts and bounds stored values from 2 through 256.
+          formInput: "<select id='autoBrightLevels' class='w3-select'><option value='10'" + (settings.autobrightlevels == 10 ? " selected" : "") + ">10</option><option value='16'" + (settings.autobrightlevels == 16 ? " selected" : "") + ">16</option><option value='32'" + (settings.autobrightlevels == 32 ? " selected" : "") + ">32</option><option value='64'" + (settings.autobrightlevels == 64 ? " selected" : "") + ">64</option><option value='256'" + (settings.autobrightlevels == 256 ? " selected" : "") + ">Continuous (256)</option></select>",
+          icon: "fa-sliders",
+          save: "updatePreference('autoBrightLevels', autoBrightLevels.value)",
+          property: "autoBrightLevels"
+        },
+        {
+          title: "Brightness Fade Speed",
+          description: "Set the maximum brightness change per second. Instant disables fading.",
+          formInput: "<select id='autoBrightFade' class='w3-select'><option value='0'" + (settings.autobrightfade == 0 ? " selected" : "") + ">Instant</option><option value='20'" + (settings.autobrightfade == 20 ? " selected" : "") + ">Slow (20/s)</option><option value='40'" + (settings.autobrightfade == 40 ? " selected" : "") + ">Smooth (40/s)</option><option value='80'" + (settings.autobrightfade == 80 ? " selected" : "") + ">Fast (80/s)</option></select>",
+          icon: "fa-adjust",
+          save: "updatePreference('autoBrightFade', autoBrightFade.value)",
+          property: "autoBrightFade"
         },
         {
           title: "Canvas Description File",
@@ -197,7 +214,7 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
       const sections = [
         { title: "General Settings", properties: ["use24hFormat", "timeZone", "ntpServer", "manualPosix"] },
         { title: "Display Settings", properties: ["displayBright", "swapBlueGreen", "swapBlueRed", "displayRotation", "driver", "i2cSpeed", "E_pin"] },
-        { title: "Automatic Brightness", properties: ["autoBright", "ldrPin"] },
+        { title: "Automatic Brightness", properties: ["autoBright", "ldrPin", "autoBrightLevels", "autoBrightFade"] },
         { title: "Canvas", properties: ["canvasFile", "canvasServer"] },
         { title: "OTA Settings", properties: ["otaEnabled", "otaPassword"] }
       ];
@@ -278,7 +295,10 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
     function readPin(pin) {
       requestGet("/read?pin=" + pin, (req) => {
         var headers = splitHeaders(req);
-        document.getElementById("ldrPinRead").innerHTML = headers.pin;  
+        document.getElementById("ldrPinRead").innerHTML = headers.pin;
+        document.getElementById("ldrLevelRead").innerHTML = headers.level + "/" + headers.levels;
+        document.getElementById("ldrBrightnessRead").innerHTML = headers.brightness;
+        document.getElementById("ldrTargetRead").innerHTML = headers.target;
       });  
     }
 
