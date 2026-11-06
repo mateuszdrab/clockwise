@@ -86,7 +86,7 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
           property: "swapBlueRed"
         },        
         {
-          title: "Timezone",
+          title: "Time Zone",
           description: "Consult your TZ identifier <a href='https://en.wikipedia.org/wiki/List_of_tz_database_time_zones'>here.</a> Examples: America/Sao_Paulo, Europe/Lisbon",
           formInput: "<input id='tz' class='w3-input w3-light-grey' name='tz' type='text' placeholder='Timezone' value='" + settings.timezone + "'>",
           icon: "fa-globe",
@@ -95,7 +95,7 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         },
         {
           title: "NTP Server",
-          description: "Configure your prefered NTP Server. You can use one of the <a href='https://www.ntppool.org'>NTP Pool Project</a> pools or a local one.",
+          description: "Configure your preferred NTP server. Use an <a href='https://www.ntppool.org'>NTP Pool Project</a> pool or a local server.",
           formInput: "<input id='ntp' class='w3-input w3-light-grey' name='ntp' type='text' placeholder='NTP Server' value='" + settings.ntpserver + "'>",
           icon: "fa-server",
           save: "updatePreference('ntpServer', ntp.value)",
@@ -118,8 +118,8 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
           property: "otaPassword"
         },
         {
-          title: "Automatic Bright",
-          description: "Inform the values read by the LDR when the room is dark (min value) and bright (max value). Range 0 - 4095",
+          title: "Automatic Brightness",
+          description: "Enter the LDR readings for a dark room (minimum) and a bright room (maximum). Range: 0-4095.",
           formInput: "<input id='autoBrightMin' class='w3-input w3-light-grey w3-cell w3-margin-right' name='autoBrightMin' style='width:45%;' type='number' min='0' max='4095' placeholder='Min value' value='" + settings.autobrightmin + "'>" + 
                      "<input id='autoBrightMax' class='w3-input w3-light-grey w3-cell' name='autoBrightMax' style='width:45%;' type='number' min='0' max='4095' placeholder='Max value' value='" + settings.autobrightmax + "'>",
           icon: "fa-sun-o",
@@ -135,8 +135,8 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
           property: "ldrPin"
         },
         {
-          title: "[Canvas] Description file",
-          description: "Name of the description file to be rendered without extension.",
+          title: "Canvas Description File",
+          description: "Name of the description file to render, without the file extension.",
           formInput: "<input id='descFile' class='w3-input w3-light-grey' name='descFile' type='text' placeholder='Description File' value='" + settings.canvasfile + "'>",
           icon: "fa-file-image-o",
           save: "updatePreference('canvasFile', descFile.value)",
@@ -144,8 +144,8 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
           exclusive: "cw-cf-0x07"
         },
         {
-          title: "[Canvas] Server Address",
-          description: "Server address where the description files are located. Change this to test it locally.",
+          title: "Canvas Server Address",
+          description: "Address of the server hosting the description files. Use a local server address for testing.",
           formInput: "<input id='serverAddress' class='w3-input w3-light-grey' name='serverAddress' type='text' placeholder='Canvas Server' value='" + settings.canvasserver + "'>",
           icon: "fa-server",
           save: "updatePreference('canvasServer', serverAddress.value)",
@@ -153,8 +153,8 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
           exclusive: "cw-cf-0x07"
         },
         {
-          title: "Posix Timezone String",
-          description: "To avoid remote lookups, provide a Posix string that corresponds to your timezone. Leave empty to obtain this automatically from the server. <a href=\"https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv\">Click here for a list.</a>",
+          title: "POSIX Time Zone String",
+          description: "To avoid remote lookups, enter the POSIX string for your time zone. Leave this blank to fetch it from the server automatically. <a href=\"https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv\">View the list.</a>",
           formInput: "<input id='posixString' class='w3-input w3-light-grey' name='posixString' type='text' placeholder='Manual Posix String' value='" + settings.manualposix + "'>",
           icon: "fa-globe",
           save: "updatePreference('manualPosix', posixString.value)",
