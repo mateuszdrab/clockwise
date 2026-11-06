@@ -126,6 +126,15 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
           property: "otaPassword"
         },
         {
+          title: "Web Firmware Update",
+          description: "Upload a firmware .bin file to the inactive OTA slot. Requires Arduino OTA enabled and its configured password. Use only on a trusted local network.",
+          formInput: "<input id='firmwareFile' class='w3-input w3-light-grey' type='file' accept='.bin,application/octet-stream'><input id='firmwarePassword' class='w3-input w3-light-grey' type='password' maxlength='64' autocomplete='current-password' placeholder='Arduino OTA password'>",
+          icon: "fa-upload",
+          buttonText: "Upload Firmware",
+          save: "uploadFirmware()",
+          property: "firmwareUpload"
+        },
+        {
           title: "LDR Range",
           description: "Enter the LDR readings for a dark room (minimum) and a bright room (maximum). Range: 0-4095.",
           formInput: "<input id='autoBrightMin' class='w3-input w3-light-grey w3-cell w3-margin-right' name='autoBrightMin' style='width:45%;' type='number' min='0' max='4095' placeholder='Min value' value='" + settings.autobrightmin + "'>" + 
@@ -245,7 +254,7 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         { title: "Automatic Brightness", properties: ["autoBright", "ldrPin", "autoBrightLevels", "autoBrightFade"] },
         { title: "Canvas", properties: ["canvasUrl", "canvasUpload", "canvasFile", "canvasServer"] },
         { title: "Wi-Fi Settings", properties: ["wifiAutoConfig"] },
-        { title: "OTA Settings", properties: ["otaEnabled", "otaPassword"] }
+        { title: "OTA Settings", properties: ["otaEnabled", "otaPassword", "firmwareUpload"] }
       ];
       const base = document.querySelector('#base');
       const rendered = document.createDocumentFragment();
@@ -343,6 +352,42 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         status.textContent = 'The selected file is not valid JSON.';
         status.style.display = 'block';
       });
+    }
+
+    function uploadFirmware() {
+      const file = document.getElementById('firmwareFile').files[0];
+      const password = document.getElementById('firmwarePassword').value;
+      const status = document.getElementById('status');
+      if (!file || !file.name.toLowerCase().endsWith('.bin')) {
+        status.textContent = 'Choose a firmware .bin file first.';
+        status.style.display = 'block';
+        return;
+      }
+      if (!password) {
+        status.textContent = 'Enter the configured Arduino OTA password.';
+        status.style.display = 'block';
+        return;
+      }
+
+      const xhr = new XMLHttpRequest();
+      xhr.upload.onprogress = function (event) {
+        if (event.lengthComputable) {
+          status.textContent = 'Uploading firmware: ' + Math.floor(event.loaded * 100 / event.total) + '%';
+          status.style.display = 'block';
+        }
+      };
+      xhr.onload = function () {
+        status.textContent = this.status == 200 ? 'Firmware verified; device is restarting.' :
+          (this.status == 403 ? 'OTA is disabled or the password is incorrect.' : 'Firmware upload failed.');
+        status.style.display = 'block';
+      };
+      xhr.onerror = function () {
+        status.textContent = 'Firmware upload connection failed.';
+        status.style.display = 'block';
+      };
+      xhr.open('POST', '/ota/upload');
+      xhr.setRequestHeader('X-OTA-Password', password);
+      xhr.send(file);
     }
 
     function splitHeaders(request) {

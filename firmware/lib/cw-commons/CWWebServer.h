@@ -2,6 +2,7 @@
 
 #include <WiFi.h>
 #include <LittleFS.h>
+#include <Update.h>
 #include <CWPreferences.h>
 #include <stdlib.h>
 #include "AutoBrightnessController.h"
@@ -88,19 +89,30 @@ struct ClockwiseWebServer
       String method = requestLine.substring(0, methodEnd);
       String path = requestLine.substring(methodEnd + 1, pathEnd);
       uint32_t contentLength = 0;
+      String otaPasswordHeader;
       while (client.connected()) {
         String header = client.readStringUntil('\n');
         header.trim();
         if (header.length() == 0)
           break;
         const int separator = header.indexOf(':');
-        if (separator > 0 && header.substring(0, separator).equalsIgnoreCase("Content-Length"))
-          contentLength = header.substring(separator + 1).toInt();
+        if (separator > 0) {
+          String name = header.substring(0, separator);
+          String value = header.substring(separator + 1);
+          name.trim();
+          value.trim();
+          if (name.equalsIgnoreCase("Content-Length"))
+            contentLength = value.toInt();
+          else if (name.equalsIgnoreCase("X-OTA-Password"))
+            otaPasswordHeader = value;
+        }
       }
 
       String key = "";
       String value = "";
-      if (method == "POST" && path == "/canvas/upload") {
+      if (method == "POST" && path == "/ota/upload") {
+        receiveFirmwareUpload(client, contentLength, otaPasswordHeader);
+      } else if (method == "POST" && path == "/canvas/upload") {
         receiveCanvasUpload(client, contentLength);
       } else {
         if (path.indexOf('?') > 0) {
@@ -181,6 +193,87 @@ struct ClockwiseWebServer
     canvasDownloadReady = false;
     canvasUploadReady = true;
     client.println("HTTP/1.1 202 Accepted\r\nConnection: close\r\n");
+  }
+
+  bool matchesPassword(const String &provided, const String &expected)
+  {
+    if (provided.length() != expected.length() || expected.isEmpty())
+      return false;
+    uint8_t difference = 0;
+    for (size_t index = 0; index < expected.length(); ++index)
+      difference |= static_cast<uint8_t>(provided[index] ^ expected[index]);
+    return difference == 0;
+  }
+
+  void receiveFirmwareUpload(WiFiClient &client, uint32_t contentLength, const String &providedPassword)
+  {
+    ClockwiseParams *params = ClockwiseParams::getInstance();
+    params->load();
+    if (!params->otaEnabled || params->otaPassword.isEmpty()) {
+      client.println("HTTP/1.1 403 OTA Disabled\r\nConnection: close\r\n");
+      return;
+    }
+    if (!matchesPassword(providedPassword, params->otaPassword)) {
+      client.println("HTTP/1.1 403 Invalid OTA Password\r\nConnection: close\r\n");
+      return;
+    }
+    if (contentLength == 0) {
+      client.println("HTTP/1.1 400 Empty Firmware\r\nConnection: close\r\n");
+      return;
+    }
+    if (!Update.begin(contentLength, U_FLASH)) {
+      Update.printError(Serial);
+      client.println("HTTP/1.1 413 Firmware Too Large\r\nConnection: close\r\n");
+      return;
+    }
+
+    StatusController::getInstance()->otaUpdateStarted();
+    uint8_t buffer[1024];
+    uint32_t receivedTotal = 0;
+    uint8_t displayedPercent = 255;
+    uint32_t lastDataMillis = millis();
+    bool success = true;
+    while (receivedTotal < contentLength) {
+      const int available = client.available();
+      if (available <= 0) {
+        if (!client.connected() || millis() - lastDataMillis >= 15000) {
+          success = false;
+          break;
+        }
+        delay(1);
+        continue;
+      }
+
+      const uint32_t remaining = contentLength - receivedTotal;
+      const size_t requested = available < static_cast<int>(sizeof(buffer)) ? available : sizeof(buffer);
+      const size_t count = client.read(buffer, requested < remaining ? requested : remaining);
+      if (count == 0 || Update.write(buffer, count) != count) {
+        success = false;
+        break;
+      }
+
+      receivedTotal += count;
+      lastDataMillis = millis();
+      const uint8_t percent = static_cast<uint8_t>((static_cast<uint64_t>(receivedTotal) * 100) / contentLength);
+      if (percent != displayedPercent) {
+        displayedPercent = percent;
+        StatusController::getInstance()->otaUpdateProgress(percent);
+      }
+    }
+
+    if (!success || receivedTotal != contentLength || !Update.end()) {
+      const uint8_t error = Update.getError();
+      Update.abort();
+      StatusController::getInstance()->otaUpdateFailed(error);
+      client.println("HTTP/1.1 400 Firmware Update Failed\r\nConnection: close\r\n");
+      return;
+    }
+
+    StatusController::getInstance()->otaUpdateFinished();
+    client.println("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: close\r\n");
+    client.println("Firmware verified; restarting");
+    client.flush();
+    force_restart = true;
   }
 
   void processRequest(WiFiClient client, String method, String path, String key, String value)
