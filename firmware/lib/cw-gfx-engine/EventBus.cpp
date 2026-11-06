@@ -1,5 +1,6 @@
 
 #include "EventBus.h"
+#include <SystemLog.h>
 
 void EventBus::broadcast(EventType event, Sprite* sender) {
   for (uint8_t i = 0; i < _subNum; i++) {
@@ -14,7 +15,7 @@ void EventBus::subscribe(EventTask* task) {
     _subscriptions[_subNum] = task;
     _subNum++;
   } else {
-    Serial.println("Out of space");
+    SerialLog::instance().println("Out of space");
   }
 
 }

@@ -6,6 +6,7 @@
 #include <CWPreferences.h>
 #include <stdlib.h>
 #include "AutoBrightnessController.h"
+#include "SystemLog.h"
 #include "StatusController.h"
 #include "SettingsWebPage.h"
 
@@ -129,7 +130,16 @@ struct ClockwiseWebServer
           }
           path = path.substring(0, queryStart);
         }
-        processRequest(client, method, path, key, value);
+        if (method == "GET" && (path == "/logs" || path == "/canvas/logs")) {
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-Type: text/plain; charset=utf-8");
+          client.println("Cache-Control: no-store");
+          client.println("Connection: close");
+          client.println();
+          SystemLog::instance().writeTo(client);
+        } else {
+          processRequest(client, method, path, key, value);
+        }
       }
       delay(1);
       client.stop();
@@ -234,7 +244,7 @@ struct ClockwiseWebServer
       return;
     }
     if (!Update.begin(contentLength, U_FLASH)) {
-      Update.printError(Serial);
+      Update.printError(SerialLog::instance());
       client.println("HTTP/1.1 413 Firmware Too Large\r\nConnection: close\r\n");
       return;
     }

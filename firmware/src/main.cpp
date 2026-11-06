@@ -39,7 +39,7 @@ void setupOtaDisplayCallbacks()
         otaInProgress = true;
         lastOtaPercent = -1;
         StatusController::getInstance()->otaUpdateStarted();
-        Serial.println("[OTA] Update started");
+        SerialLog::instance().println("[OTA] Update started");
       })
       .onProgress([](unsigned int progress, unsigned int total) {
         const uint8_t percent = total == 0 ? 0 : (static_cast<uint64_t>(progress) * 100) / total;
@@ -47,15 +47,15 @@ void setupOtaDisplayCallbacks()
           return;
         lastOtaPercent = percent;
         StatusController::getInstance()->otaUpdateProgress(percent);
-        Serial.printf("[OTA] Progress: %u%%\n", percent);
+        SerialLog::instance().printf("[OTA] Progress: %u%%\n", percent);
       })
       .onEnd([]() {
         StatusController::getInstance()->otaUpdateFinished();
-        Serial.println("[OTA] Update complete; restarting");
+        SerialLog::instance().println("[OTA] Update complete; restarting");
       })
       .onError([](ota_error_t error) {
         StatusController::getInstance()->otaUpdateFailed(static_cast<uint8_t>(error));
-        Serial.printf("[OTA] Update failed with error %u\n", static_cast<uint8_t>(error));
+        SerialLog::instance().printf("[OTA] Update failed with error %u\n", static_cast<uint8_t>(error));
         if (otaInProgress) {
           otaRestartPending = true;
           otaRestartAtMillis = millis() + 2000;
@@ -103,12 +103,12 @@ void displaySetup(bool swapBlueGreen, bool swapBlueRed, uint8_t displayBright, u
   if (isValidDriver(driver)) {
     mxconfig.driver = static_cast<HUB75_I2S_CFG::shift_driver>(driver);
   } else {
-    Serial.printf("[ERROR] Invalid driver from config:%d\n", driver);
+    SerialLog::instance().printf("[ERROR] Invalid driver from config:%d\n", driver);
   }
   if (isValidI2SSpeed(i2cSpeed)) {
     mxconfig.i2sspeed = static_cast<HUB75_I2S_CFG::clk_speed>(i2cSpeed);
   } else {
-    Serial.printf("[ERROR] Invalid I2S speed from config:%d\n", i2cSpeed);
+    SerialLog::instance().printf("[ERROR] Invalid I2S speed from config:%d\n", i2cSpeed);
   }
 
   // Display Setup
@@ -145,7 +145,7 @@ void automaticBrightControl()
 
   if (now - autoBrightDebugMillis >= 1000) {
     autoBrightDebugMillis = now;
-    Serial.printf("[AutoBright] ADC: %u, level: %u/%u, target: %u, brightness: %u\n",
+    SerialLog::instance().printf("[AutoBright] ADC: %u, level: %u/%u, target: %u, brightness: %u\n",
         lastLdrReading, controller.level(), controller.levels(), controller.targetBrightness(), brightness);
   }
 }
@@ -159,7 +159,7 @@ void setup()
 
   ClockwiseParams::getInstance()->load();
   if (!LittleFS.begin(true))
-    Serial.println("[Canvas] LittleFS mount failed; local cache and upload are unavailable");
+    SerialLog::instance().println("[Canvas] LittleFS mount failed; local cache and upload are unavailable");
 
   pinMode(ClockwiseParams::getInstance()->ldrPin, INPUT);
 
@@ -193,11 +193,11 @@ void onNetworkReady()
       ArduinoOTA.setPassword(params->otaPassword.c_str());
     setupOtaDisplayCallbacks();
     ArduinoOTA.begin();
-    Serial.println("[OTA] Ready for wireless updates");
+    SerialLog::instance().println("[OTA] Ready for wireless updates");
   }
   else
   {
-    Serial.println("[OTA] Disabled in settings");
+    SerialLog::instance().println("[OTA] Disabled in settings");
   }
 
   StatusController::getInstance()->ntpConnecting();
@@ -224,9 +224,9 @@ void loop()
       if (webServer->takeCanvasDownload())
         clockface->downloadConfiguredUrl();
       if (webServer->takeCanvasUpload() && !clockface->loadUploadedDefinition())
-        Serial.println("[Canvas] Could not activate uploaded clockface");
+        SerialLog::instance().println("[Canvas] Could not activate uploaded clockface");
       if (webServer->takeCanvasCacheClear() && !clockface->clearLocalCache())
-        Serial.println("[Canvas] Could not clear local cache");
+        SerialLog::instance().println("[Canvas] Could not clear local cache");
     }
     ezt::events();
   }

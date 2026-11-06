@@ -4,6 +4,7 @@
 #include <WiFiClientSecure.h>
 #include <FS.h>
 #include <stdlib.h>
+#include "SystemLog.h"
 
 struct ClockwiseHttpClient
 {
@@ -21,15 +22,24 @@ struct ClockwiseHttpClient
     const int fragment = requestUrl.indexOf('#');
     if (fragment >= 0)
       requestUrl.remove(fragment);
+    String logUrl = requestUrl;
+    const int query = logUrl.indexOf('?');
+    if (query >= 0)
+      logUrl.remove(query);
+    CanvasLog::instance().logf("[Canvas] Request: %s", logUrl.c_str());
 
     const int schemeEnd = requestUrl.indexOf("://");
-    if (schemeEnd < 0)
+    if (schemeEnd < 0) {
+      CanvasLog::instance().logf("[Canvas] Invalid URL: missing scheme");
       return false;
+    }
     String scheme = requestUrl.substring(0, schemeEnd);
     scheme.toLowerCase();
     const bool secure = scheme == "https";
-    if (!secure && scheme != "http")
+    if (!secure && scheme != "http") {
+      CanvasLog::instance().logf("[Canvas] Unsupported URL scheme: %s", scheme.c_str());
       return false;
+    }
 
     const int authorityStart = schemeEnd + 3;
     int pathStart = requestUrl.indexOf('/', authorityStart);
@@ -63,7 +73,7 @@ struct ClockwiseHttpClient
     }
     client->setTimeout(10000);
     if (!client->connect(host.c_str(), port)) {
-      Serial.printf("[Canvas] Connect failed: %s\n", url.c_str());
+      CanvasLog::instance().logf("[Canvas] Connect failed: %s", url.c_str());
       return false;
     }
 
@@ -78,7 +88,7 @@ struct ClockwiseHttpClient
     const int firstSpace = status.indexOf(' ');
     const int statusCode = firstSpace < 0 ? 0 : status.substring(firstSpace + 1, firstSpace + 4).toInt();
     if (statusCode != 200 && statusCode != 301 && statusCode != 302 && statusCode != 303 && statusCode != 307 && statusCode != 308) {
-      Serial.printf("[Canvas] Unexpected HTTP status: %s\n", status.c_str());
+      CanvasLog::instance().logf("[Canvas] Unexpected HTTP status: %s", status.c_str());
       client->stop();
       return false;
     }
@@ -86,7 +96,7 @@ struct ClockwiseHttpClient
     int32_t contentLength = -1;
     bool chunked = false;
     String redirectLocation;
-    while (client->connected()) {
+    while (client->connected() || client->available()) {
       String header = client->readStringUntil('\n');
       header.trim();
       if (header.length() == 0)
@@ -109,8 +119,14 @@ struct ClockwiseHttpClient
 
     if (statusCode != 200) {
       client->stop();
-      if (redirectLocation.isEmpty() || redirectCount >= 3)
+      if (redirectLocation.isEmpty()) {
+        CanvasLog::instance().logf("[Canvas] HTTP %d redirect from %s has no Location header", statusCode, logUrl.c_str());
         return false;
+      }
+      if (redirectCount >= 3) {
+        CanvasLog::instance().logf("[Canvas] Redirect limit reached (HTTP %d from %s)", statusCode, logUrl.c_str());
+        return false;
+      }
 
       String redirectedUrl = redirectLocation;
       if (redirectedUrl.startsWith("//"))
@@ -121,13 +137,16 @@ struct ClockwiseHttpClient
         const int lastSlash = requestUrl.lastIndexOf('/');
         redirectedUrl = requestUrl.substring(0, lastSlash + 1) + redirectedUrl;
       }
+      CanvasLog::instance().logf("[Canvas] Following HTTP %d redirect to %s", statusCode, redirectedUrl.c_str());
       return getToFile(redirectedUrl, output, redirectCount + 1);
     }
 
     uint32_t written = 0;
     bool success;
-    if (contentLength > static_cast<int32_t>(MAX_CANVAS_BYTES))
+    if (contentLength > static_cast<int32_t>(MAX_CANVAS_BYTES)) {
+      CanvasLog::instance().logf("[Canvas] Response too large: %ld bytes", static_cast<long>(contentLength));
       success = false;
+    }
     else if (chunked)
       success = copyChunkedBody(*client, output, written);
     else if (contentLength >= 0)
@@ -136,6 +155,7 @@ struct ClockwiseHttpClient
       success = copyUntilClose(*client, output, written);
 
     client->stop();
+    CanvasLog::instance().logf(success && written > 0 ? "[Canvas] Received %lu bytes" : "[Canvas] Response transfer failed after %lu bytes", static_cast<unsigned long>(written));
     return success && written > 0;
   }
 
@@ -201,11 +221,11 @@ struct ClockwiseHttpClient
 
   void httpGet(WiFiClientSecure *client, const char *host, const char *path, const uint16_t port)
   {
-    Serial.printf("[HTTP] GET request to '%s%s' on port %d\n", host, path, port);
+    SerialLog::instance().printf("[HTTP] GET request to '%s%s' on port %d\n", host, path, port);
 
     if (WiFi.status() != WL_CONNECTED)
     {
-      Serial.println("Not connected");
+      SerialLog::instance().println("Not connected");
       return;
     }
 
@@ -213,7 +233,7 @@ struct ClockwiseHttpClient
     client->setTimeout(10000);
     if (!client->connect(host, port))
     {
-      Serial.println(F("Connection failed"));
+      SerialLog::instance().println(F("Connection failed"));
       return;
     }
 
@@ -223,7 +243,7 @@ struct ClockwiseHttpClient
     client->println(F("Connection: close"));
     if (client->println() == 0)
     {
-      Serial.println(F("Failed to send request"));
+      SerialLog::instance().println(F("Failed to send request"));
       client->stop();
       return;
     }
@@ -239,8 +259,8 @@ struct ClockwiseHttpClient
 
     if (strstr(status, "200 OK") == NULL)
     {
-      Serial.print(F("Unexpected response: "));
-      Serial.println(status);
+      SerialLog::instance().print(F("Unexpected response: "));
+      SerialLog::instance().println(status);
       client->stop();
       return;
     }
@@ -249,7 +269,7 @@ struct ClockwiseHttpClient
     char endOfHeaders[] = "\r\n\r\n";
     if (!client->find(endOfHeaders))
     {
-      Serial.println(F("Invalid response"));
+      SerialLog::instance().println(F("Invalid response"));
       client->stop();
       return;
     }

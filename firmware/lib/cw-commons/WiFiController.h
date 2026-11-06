@@ -113,7 +113,7 @@ struct WiFiController
     wm.setConfigPortalTimeout(0); // timeout is owned by WiFiSetupStateMachine
     wm.startConfigPortal("Clockwise-Wifi");
 
-    Serial.println("[WiFi] AP 'Clockwise-Wifi' started; Improv Serial still available");
+    SerialLog::instance().println("[WiFi] AP 'Clockwise-Wifi' started; Improv Serial still available");
   }
 
   void onConnected()
@@ -134,7 +134,7 @@ struct WiFiController
       MDNS.addService("http", "tcp", 80);
     }
 
-    Serial.printf("[WiFi] Connected to %s, IP address %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+    SerialLog::instance().printf("[WiFi] Connected to %s, IP address %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
   }
 
   // Non-blocking: starts the provisioning flow and returns immediately.
@@ -155,12 +155,12 @@ struct WiFiController
 
     if (setupFsm.begin(!params->wifiSsid.isEmpty(), millis()) == cw::WiFiSetupAction::StartStationConnect)
     {
-      Serial.printf("[WiFi] Connecting to %s\n", params->wifiSsid.c_str());
+      SerialLog::instance().printf("[WiFi] Connecting to %s\n", params->wifiSsid.c_str());
       WiFi.begin(params->wifiSsid.c_str(), params->wifiPwd.c_str());
     }
     else
     {
-      Serial.println("[WiFi] No stored credentials, waiting for Improv Serial");
+      SerialLog::instance().println("[WiFi] No stored credentials, waiting for Improv Serial");
     }
   }
 
@@ -176,7 +176,7 @@ struct WiFiController
     switch (setupFsm.update(millis(), improvSerial.isConnected(), improvActivity))
     {
     case cw::WiFiSetupAction::EnterImprovWait:
-      Serial.println("[WiFi] Stored credentials failed, waiting for Improv Serial");
+      SerialLog::instance().println("[WiFi] Stored credentials failed, waiting for Improv Serial");
       WiFi.disconnect(); // stop retrying stale credentials in the background
       break;
 
@@ -187,7 +187,7 @@ struct WiFiController
     case cw::WiFiSetupAction::RetryStationConnect: {
       ClockwiseParams *params = ClockwiseParams::getInstance();
       params->load();
-      Serial.printf("[WiFi] Retrying saved credentials for %s\n", params->wifiSsid.c_str());
+      SerialLog::instance().printf("[WiFi] Retrying saved credentials for %s\n", params->wifiSsid.c_str());
       WiFi.begin(params->wifiSsid.c_str(), params->wifiPwd.c_str());
       break;
     }

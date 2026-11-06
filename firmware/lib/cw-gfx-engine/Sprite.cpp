@@ -1,5 +1,6 @@
 
 #include "Sprite.h"
+#include <SystemLog.h>
 
 boolean Sprite::collidedWith(Sprite* sprite) {
   return (this->_x < sprite->_x + sprite->_width &&
@@ -9,6 +10,6 @@ boolean Sprite::collidedWith(Sprite* sprite) {
 }
 
 void Sprite::logPosition() {
-  Serial.print("x = "); Serial.print(_x); Serial.print(", y = "); Serial.print(_y); 
-  Serial.print(", w = "); Serial.print(_width); Serial.print(", h = "); Serial.println(_height);
+  SerialLog::instance().print("x = "); SerialLog::instance().print(_x); SerialLog::instance().print(", y = "); SerialLog::instance().print(_y);
+  SerialLog::instance().print(", w = "); SerialLog::instance().print(_width); SerialLog::instance().print(", h = "); SerialLog::instance().println(_height);
 }

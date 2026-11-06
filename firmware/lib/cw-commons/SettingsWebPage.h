@@ -49,6 +49,10 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
       </div>
     </div>
   </div>
+  <div class="w3-container w3-padding-16">
+    <h3 class="w3-large">System Log</h3>
+    <pre id="system-log" class="w3-black w3-padding" style="min-height:120px; max-height:240px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere;">Loading system log...</pre>
+  </div>
   <script>
     function createCards(settings) {
       console.log(settings);
@@ -438,6 +442,19 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
       xmlhttp.open("GET", path, true);
       xmlhttp.send();
     }
+
+    function refreshSystemLog() {
+      const xhr = new XMLHttpRequest();
+      xhr.onreadystatechange = function () {
+        if (this.readyState !== 4) return;
+        const log = document.getElementById('system-log');
+        const wasAtBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
+        log.textContent = this.status == 200 ? this.responseText : 'Could not load Canvas activity.';
+        if (wasAtBottom) log.scrollTop = log.scrollHeight;
+      };
+      xhr.open('GET', '/logs', true);
+      xhr.send();
+    }
     
     function readPin(pin) {
       requestGet("/read?pin=" + pin, (req) => {
@@ -450,6 +467,8 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
     }
 
     function begin() {
+      refreshSystemLog();
+      setInterval(refreshSystemLog, 3000);
       requestGet("/get", (req) => {
         createCards(splitHeaders(req));
       });  
