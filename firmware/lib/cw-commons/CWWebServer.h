@@ -231,11 +231,11 @@ struct ClockwiseWebServer
   {
     ClockwiseParams *params = ClockwiseParams::getInstance();
     params->load();
-    if (!params->otaEnabled || params->otaPassword.isEmpty()) {
+    if (!params->otaEnabled) {
       client.println("HTTP/1.1 403 OTA Disabled\r\nConnection: close\r\n");
       return;
     }
-    if (!matchesPassword(providedPassword, params->otaPassword)) {
+    if (!params->otaPassword.isEmpty() && !matchesPassword(providedPassword, params->otaPassword)) {
       client.println("HTTP/1.1 403 Invalid OTA Password\r\nConnection: close\r\n");
       return;
     }
