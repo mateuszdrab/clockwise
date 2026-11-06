@@ -27,6 +27,36 @@ uint32_t autoBrightSampleMillis = 0;
 uint32_t autoBrightDebugMillis = 0;
 uint16_t lastLdrReading = 0;
 uint8_t lastAppliedBrightness = 0;
+bool otaInProgress = false;
+int lastOtaPercent = -1;
+
+void setupOtaDisplayCallbacks()
+{
+  ArduinoOTA
+      .onStart([]() {
+        otaInProgress = true;
+        lastOtaPercent = -1;
+        StatusController::getInstance()->otaUpdateStarted();
+        Serial.println("[OTA] Update started");
+      })
+      .onProgress([](unsigned int progress, unsigned int total) {
+        const uint8_t percent = total == 0 ? 0 : (static_cast<uint64_t>(progress) * 100) / total;
+        if (percent == lastOtaPercent)
+          return;
+        lastOtaPercent = percent;
+        StatusController::getInstance()->otaUpdateProgress(percent);
+        Serial.printf("[OTA] Progress: %u%%\n", percent);
+      })
+      .onEnd([]() {
+        StatusController::getInstance()->otaUpdateFinished();
+        Serial.println("[OTA] Update complete; restarting");
+      })
+      .onError([](ota_error_t error) {
+        otaInProgress = false;
+        StatusController::getInstance()->otaUpdateFailed(static_cast<uint8_t>(error));
+        Serial.printf("[OTA] Update failed with error %u\n", static_cast<uint8_t>(error));
+      });
+}
 
 bool isValidI2SSpeed(uint32_t speed) {
   return speed == 8000000 || speed == 16000000 || speed == 20000000;
@@ -154,6 +184,7 @@ void onNetworkReady()
   {
     if (!params->otaPassword.isEmpty())
       ArduinoOTA.setPassword(params->otaPassword.c_str());
+    setupOtaDisplayCallbacks();
     ArduinoOTA.begin();
     Serial.println("[OTA] Ready for wireless updates");
   }
@@ -180,16 +211,19 @@ void loop()
   if (wifi.isConnected())
   {
     ArduinoOTA.handle();
-    ClockwiseWebServer *webServer = ClockwiseWebServer::getInstance();
-    webServer->handleHttpRequest();
-    if (webServer->takeCanvasDownload())
-      clockface->downloadConfiguredUrl();
-    if (webServer->takeCanvasUpload() && !clockface->loadUploadedDefinition())
-      Serial.println("[Canvas] Could not activate uploaded clockface");
+    if (!otaInProgress) {
+      ClockwiseWebServer *webServer = ClockwiseWebServer::getInstance();
+      webServer->handleHttpRequest();
+      if (webServer->takeCanvasDownload())
+        clockface->downloadConfiguredUrl();
+      if (webServer->takeCanvasUpload() && !clockface->loadUploadedDefinition())
+        Serial.println("[Canvas] Could not activate uploaded clockface");
+    }
     ezt::events();
   }
 
-  clockface->update();
-
-  automaticBrightControl();
+  if (!otaInProgress) {
+    clockface->update();
+    automaticBrightControl();
+  }
 }

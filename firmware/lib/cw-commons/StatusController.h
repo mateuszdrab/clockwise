@@ -161,6 +161,42 @@ struct StatusController
 		printCenter("NTP Server", 61);
 	}
 
+	void otaUpdateStarted()
+	{
+		auto *display = Locator::getDisplay();
+		display->fillScreen(0);
+		display->fillTriangle(32, 17, 20, 31, 44, 31, 0x07E0);
+		display->fillRect(29, 28, 6, 18, 0x07E0);
+		display->drawLine(17, 43, 17, 53, 0x07E0);
+		display->drawLine(46, 43, 46, 53, 0x07E0);
+		display->drawLine(17, 53, 46, 53, 0x07E0);
+		display->drawLine(17, 43, 24, 43, 0x07E0);
+		display->drawLine(39, 43, 46, 43, 0x07E0);
+		printCenter("OTA Update", 62);
+	}
+
+	void otaUpdateProgress(uint8_t percent)
+	{
+		char label[12];
+		snprintf(label, sizeof(label), "OTA %u%%", percent);
+		Locator::getDisplay()->fillRect(0, 55, 64, 9, 0);
+		printCenter(label, 62);
+	}
+
+	void otaUpdateFinished()
+	{
+		Locator::getDisplay()->fillRect(0, 55, 64, 9, 0);
+		printCenter("OTA Complete", 62);
+	}
+
+	void otaUpdateFailed(uint8_t error)
+	{
+		char label[16];
+		snprintf(label, sizeof(label), "OTA Error %u", error);
+		Locator::getDisplay()->fillRect(0, 55, 64, 9, 0);
+		printCenter(label, 62);
+	}
+
 	void printCenter(const char *buf, int y)
 	{
 		int16_t x1, y1;
