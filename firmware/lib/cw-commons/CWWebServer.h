@@ -217,6 +217,8 @@ struct ClockwiseWebServer
         ClockwiseParams::getInstance()->wifiPwd = value;
       } else if (key == ClockwiseParams::getInstance()->PREF_OTA_ENABLED) {
         ClockwiseParams::getInstance()->otaEnabled = (value == "1");
+      } else if (key == ClockwiseParams::getInstance()->PREF_WIFI_AUTO_CONFIG) {
+        ClockwiseParams::getInstance()->wifiAutoConfig = (value == "1");
       } else if (key == ClockwiseParams::getInstance()->PREF_OTA_PASSWORD) {
         ClockwiseParams::getInstance()->otaPassword = value;
       } else if (key == "autoBright") {   //autoBright=0010,0800
@@ -292,6 +294,7 @@ struct ClockwiseWebServer
     client.printf(HEADER_TEMPLATE_S, ClockwiseParams::getInstance()->PREF_TIME_ZONE, ClockwiseParams::getInstance()->timeZone.c_str());
     client.printf(HEADER_TEMPLATE_S, ClockwiseParams::getInstance()->PREF_WIFI_SSID, ClockwiseParams::getInstance()->wifiSsid.c_str());
     client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_OTA_ENABLED, ClockwiseParams::getInstance()->otaEnabled);
+    client.printf(HEADER_TEMPLATE_D, ClockwiseParams::getInstance()->PREF_WIFI_AUTO_CONFIG, ClockwiseParams::getInstance()->wifiAutoConfig);
     client.printf(HEADER_TEMPLATE_S, ClockwiseParams::getInstance()->PREF_NTP_SERVER, ClockwiseParams::getInstance()->ntpServer.c_str());
     client.printf(HEADER_TEMPLATE_S, ClockwiseParams::getInstance()->PREF_CANVAS_FILE, ClockwiseParams::getInstance()->canvasFile.c_str());
     client.printf(HEADER_TEMPLATE_S, ClockwiseParams::getInstance()->PREF_CANVAS_SERVER, ClockwiseParams::getInstance()->canvasServer.c_str());

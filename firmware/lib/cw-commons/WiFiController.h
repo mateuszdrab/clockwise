@@ -149,6 +149,9 @@ struct WiFiController
 
     ClockwiseParams *params = ClockwiseParams::getInstance();
     params->load();
+    cw::WiFiSetupStateMachine::Config setupConfig;
+    setupConfig.autoStartApPortal = params->wifiAutoConfig;
+    setupFsm = cw::WiFiSetupStateMachine(setupConfig);
 
     if (setupFsm.begin(!params->wifiSsid.isEmpty(), millis()) == cw::WiFiSetupAction::StartStationConnect)
     {

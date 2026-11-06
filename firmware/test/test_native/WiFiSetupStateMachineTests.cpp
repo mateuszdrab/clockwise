@@ -42,6 +42,22 @@ void test_no_credentials_starts_portal_after_grace_window(void)
   TEST_ASSERT_EQUAL(WiFiSetupState::ApPortal, fsm.state());
 }
 
+void test_disabled_auto_config_keeps_waiting_for_improv(void)
+{
+  WiFiSetupStateMachine::Config cfg = testConfig();
+  cfg.autoStartApPortal = false;
+  WiFiSetupStateMachine fsm(cfg);
+
+  TEST_ASSERT_EQUAL(WiFiSetupAction::EnterImprovWait, fsm.begin(false, 0));
+  TEST_ASSERT_EQUAL(WiFiSetupAction::None, fsm.update(15000, false, false));
+  TEST_ASSERT_EQUAL(WiFiSetupState::ImprovWait, fsm.state());
+  TEST_ASSERT_EQUAL(WiFiSetupAction::None, fsm.update(60000, false, false));
+  TEST_ASSERT_EQUAL(WiFiSetupState::ImprovWait, fsm.state());
+
+  TEST_ASSERT_EQUAL(WiFiSetupAction::Connected, fsm.update(60001, true, true));
+  TEST_ASSERT_EQUAL(WiFiSetupState::Connected, fsm.state());
+}
+
 void test_stored_credentials_connect_emits_connected_once(void)
 {
   WiFiSetupStateMachine fsm(testConfig());
@@ -156,6 +172,7 @@ void run_wifi_setup_state_machine_tests(void)
 {
   RUN_TEST(test_no_credentials_waits_for_improv_instead_of_starting_portal);
   RUN_TEST(test_no_credentials_starts_portal_after_grace_window);
+  RUN_TEST(test_disabled_auto_config_keeps_waiting_for_improv);
   RUN_TEST(test_stored_credentials_connect_emits_connected_once);
   RUN_TEST(test_stored_credentials_timeout_falls_back_to_improv);
   RUN_TEST(test_improv_activity_extends_wait_window);

@@ -55,6 +55,8 @@ namespace cw
       uint32_t improvSessionMs = 120000;
       // How long the AP portal stays up before the device restarts.
       uint32_t portalTimeoutMs = 300000;
+      // When disabled, keep waiting for Improv instead of starting the AP portal.
+      bool autoStartApPortal = true;
     };
 
     WiFiSetupStateMachine() {}
@@ -103,6 +105,8 @@ namespace cw
           return connected(nowMs);
         if (improvWindowExpired(nowMs))
         {
+          if (!config_.autoStartApPortal)
+            return WiFiSetupAction::None;
           enter(WiFiSetupState::ApPortal, nowMs);
           return WiFiSetupAction::StartApPortal;
         }

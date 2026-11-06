@@ -102,6 +102,14 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
           property: "ntpServer"
         },
         {
+          title: "Automatic Wi-Fi Setup",
+          description: "Automatically start the Clockwise-Wifi access point after stored credentials fail. When disabled, Improv Serial remains available for manual setup. Takes effect after restart.",
+          formInput: "<input class='w3-check' type='checkbox' id='wifiAutoConfig' " + (settings.wifiautoconfig == '1' ? "checked" : "") + "><label for='wifiAutoConfig'> Start AP setup automatically</label>",
+          icon: "fa-wifi",
+          save: "updatePreference('wifiAutoConfig', Number(wifiAutoConfig.checked))",
+          property: "wifiAutoConfig"
+        },
+        {
           title: "Arduino OTA",
           description: "Allow firmware updates over Wi-Fi. Changes take effect after restart.",
           formInput: "<input class='w3-check' type='checkbox' id='otaEnabled' " + (settings.otaenabled == '1' ? "checked" : "") + "><label for='otaEnabled'> Enabled</label>",
@@ -235,6 +243,7 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         { title: "General Settings", properties: ["use24hFormat", "timeZone", "ntpServer", "manualPosix"] },
         { title: "Display Settings", properties: ["displayBright", "swapBlueGreen", "swapBlueRed", "displayRotation", "driver", "i2cSpeed", "E_pin"] },
         { title: "Automatic Brightness", properties: ["autoBright", "ldrPin", "autoBrightLevels", "autoBrightFade"] },
+        { title: "Wi-Fi Settings", properties: ["wifiAutoConfig"] },
         { title: "Canvas", properties: ["canvasUrl", "canvasUpload", "canvasFile", "canvasServer"] },
         { title: "OTA Settings", properties: ["otaEnabled", "otaPassword"] }
       ];

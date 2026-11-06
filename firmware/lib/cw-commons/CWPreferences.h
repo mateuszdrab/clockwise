@@ -23,6 +23,7 @@ struct ClockwiseParams
     const char* const PREF_TIME_ZONE = "timeZone";
     const char* const PREF_WIFI_SSID = "wifiSsid";
     const char* const PREF_WIFI_PASSWORD = "wifiPwd";
+    const char* const PREF_WIFI_AUTO_CONFIG = "wifiAutoConfig";
     const char* const PREF_OTA_ENABLED = "otaEnabled";
     const char* const PREF_OTA_PASSWORD = "otaPassword";
     const char* const PREF_NTP_SERVER = "ntpServer";
@@ -49,6 +50,7 @@ struct ClockwiseParams
     String timeZone;
     String wifiSsid;
     String wifiPwd;
+    bool wifiAutoConfig;
     bool otaEnabled;
     String otaPassword;    
     String ntpServer;
@@ -88,6 +90,7 @@ struct ClockwiseParams
         preferences.putString(PREF_TIME_ZONE, timeZone);
         preferences.putString(PREF_WIFI_SSID, wifiSsid);
         preferences.putString(PREF_WIFI_PASSWORD, wifiPwd);
+        preferences.putBool(PREF_WIFI_AUTO_CONFIG, wifiAutoConfig);
         preferences.putBool(PREF_OTA_ENABLED, otaEnabled);
         preferences.putString(PREF_OTA_PASSWORD, otaPassword);
         preferences.putString(PREF_NTP_SERVER, ntpServer);
@@ -119,6 +122,7 @@ struct ClockwiseParams
         timeZone = preferences.getString(PREF_TIME_ZONE, "America/Sao_Paulo");
         wifiSsid = preferences.getString(PREF_WIFI_SSID, "");
         wifiPwd = preferences.getString(PREF_WIFI_PASSWORD, "");
+        wifiAutoConfig = preferences.getBool(PREF_WIFI_AUTO_CONFIG, true);
         otaEnabled = preferences.getBool(PREF_OTA_ENABLED, false);
         otaPassword = preferences.getString(PREF_OTA_PASSWORD, "");
         ntpServer = preferences.getString(PREF_NTP_SERVER, "time.google.com");
