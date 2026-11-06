@@ -103,7 +103,7 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         },
         {
           title: "Automatic Wi-Fi Setup",
-          description: "Automatically start the Clockwise-Wifi access point after stored credentials fail. When disabled, Improv Serial remains available for manual setup. Takes effect after restart.",
+          description: "Automatically start the Clockwise-Wifi access point after saved credentials and one retry fail. When disabled, Improv Serial stays available and saved credentials are retried every minute. Takes effect after restart.",
           formInput: "<input class='w3-check' type='checkbox' id='wifiAutoConfig' " + (settings.wifiautoconfig == '1' ? "checked" : "") + "><label for='wifiAutoConfig'> Start AP setup automatically</label>",
           icon: "fa-wifi",
           save: "updatePreference('wifiAutoConfig', Number(wifiAutoConfig.checked))",

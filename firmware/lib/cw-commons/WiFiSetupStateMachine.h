@@ -38,6 +38,7 @@ namespace cw
     StartApPortal,       // start WiFiManager portal in non-blocking mode
     Connected,           // emitted exactly once: run network-ready setup
     Restart,             // emitted exactly once: restart the device
+    RetryStationConnect, // retry stored credentials without starting the AP portal
   };
 
   class WiFiSetupStateMachine
@@ -57,6 +58,8 @@ namespace cw
       uint32_t portalTimeoutMs = 300000;
       // When disabled, keep waiting for Improv instead of starting the AP portal.
       bool autoStartApPortal = true;
+      // When AP setup is disabled, retry saved station credentials at this interval.
+      uint32_t storedCredentialRetryMs = 60000;
     };
 
     WiFiSetupStateMachine() {}
@@ -65,8 +68,10 @@ namespace cw
     WiFiSetupAction begin(bool hasStoredCredentials, uint32_t nowMs)
     {
       improvActive_ = false;
+      hasStoredCredentials_ = hasStoredCredentials;
       if (hasStoredCredentials)
       {
+        retriedAfterImprov_ = false;
         enter(WiFiSetupState::Connecting, nowMs);
         return WiFiSetupAction::StartStationConnect;
       }
@@ -105,8 +110,21 @@ namespace cw
           return connected(nowMs);
         if (improvWindowExpired(nowMs))
         {
+          if (hasStoredCredentials_ && !retriedAfterImprov_)
+          {
+            retriedAfterImprov_ = true;
+            enter(WiFiSetupState::Connecting, nowMs);
+            return WiFiSetupAction::RetryStationConnect;
+          }
           if (!config_.autoStartApPortal)
+          {
+            if (hasStoredCredentials_ && elapsed(nowMs, stateEnteredMs_) >= config_.storedCredentialRetryMs)
+            {
+              enter(WiFiSetupState::Connecting, nowMs);
+              return WiFiSetupAction::RetryStationConnect;
+            }
             return WiFiSetupAction::None;
+          }
           enter(WiFiSetupState::ApPortal, nowMs);
           return WiFiSetupAction::StartApPortal;
         }
@@ -168,6 +186,8 @@ namespace cw
     uint32_t stateEnteredMs_ = 0;
     uint32_t lastImprovActivityMs_ = 0;
     bool improvActive_ = false;
+    bool hasStoredCredentials_ = false;
+    bool retriedAfterImprov_ = false;
   };
 
 } // namespace cw

@@ -58,6 +58,21 @@ void test_disabled_auto_config_keeps_waiting_for_improv(void)
   TEST_ASSERT_EQUAL(WiFiSetupState::Connected, fsm.state());
 }
 
+void test_disabled_auto_config_retries_saved_credentials_after_timeout(void)
+{
+  WiFiSetupStateMachine::Config cfg = testConfig();
+  cfg.autoStartApPortal = false;
+  WiFiSetupStateMachine fsm(cfg);
+
+  TEST_ASSERT_EQUAL(WiFiSetupAction::StartStationConnect, fsm.begin(true, 0));
+  TEST_ASSERT_EQUAL(WiFiSetupAction::EnterImprovWait, fsm.update(10000, false, false));
+  TEST_ASSERT_EQUAL(WiFiSetupState::ImprovWait, fsm.state());
+  TEST_ASSERT_EQUAL(WiFiSetupAction::None, fsm.update(69999, false, false));
+  TEST_ASSERT_EQUAL(WiFiSetupAction::RetryStationConnect, fsm.update(70000, false, false));
+  TEST_ASSERT_EQUAL(WiFiSetupState::Connecting, fsm.state());
+  TEST_ASSERT_EQUAL(WiFiSetupAction::EnterImprovWait, fsm.update(80000, false, false));
+}
+
 void test_stored_credentials_connect_emits_connected_once(void)
 {
   WiFiSetupStateMachine fsm(testConfig());
@@ -85,9 +100,22 @@ void test_stored_credentials_timeout_falls_back_to_improv(void)
   TEST_ASSERT_EQUAL(WiFiSetupAction::EnterImprovWait, fsm.update(10000, false, false));
   TEST_ASSERT_EQUAL(WiFiSetupState::ImprovWait, fsm.state());
 
-  // Grace window is measured from entering ImprovWait, not from boot.
+  // Grace window is measured from entering ImprovWait, then stored credentials are retried.
   TEST_ASSERT_EQUAL(WiFiSetupAction::None, fsm.update(10000 + 14999, false, false));
-  TEST_ASSERT_EQUAL(WiFiSetupAction::StartApPortal, fsm.update(10000 + 15000, false, false));
+  TEST_ASSERT_EQUAL(WiFiSetupAction::RetryStationConnect, fsm.update(10000 + 15000, false, false));
+  TEST_ASSERT_EQUAL(WiFiSetupState::Connecting, fsm.state());
+}
+
+void test_failed_post_improv_retry_starts_portal_when_enabled(void)
+{
+  WiFiSetupStateMachine fsm(testConfig());
+  fsm.begin(true, 0);
+  fsm.update(10000, false, false); // -> ImprovWait
+  TEST_ASSERT_EQUAL(WiFiSetupAction::RetryStationConnect, fsm.update(25000, false, false));
+
+  TEST_ASSERT_EQUAL(WiFiSetupAction::EnterImprovWait, fsm.update(35000, false, false));
+  TEST_ASSERT_EQUAL(WiFiSetupAction::StartApPortal, fsm.update(50000, false, false));
+  TEST_ASSERT_EQUAL(WiFiSetupState::ApPortal, fsm.state());
 }
 
 // While a browser is talking Improv, keep waiting so the user can pick an SSID
@@ -119,7 +147,7 @@ void test_improv_activity_during_connecting_carries_over(void)
 
   // Grace would end at 25000, but the session (5000 + 120000) keeps us waiting.
   TEST_ASSERT_EQUAL(WiFiSetupAction::None, fsm.update(30000, false, false));
-  TEST_ASSERT_EQUAL(WiFiSetupAction::StartApPortal, fsm.update(125000, false, false));
+  TEST_ASSERT_EQUAL(WiFiSetupAction::RetryStationConnect, fsm.update(125000, false, false));
 }
 
 void test_improv_provisioning_during_wait_connects(void)
@@ -173,8 +201,10 @@ void run_wifi_setup_state_machine_tests(void)
   RUN_TEST(test_no_credentials_waits_for_improv_instead_of_starting_portal);
   RUN_TEST(test_no_credentials_starts_portal_after_grace_window);
   RUN_TEST(test_disabled_auto_config_keeps_waiting_for_improv);
+  RUN_TEST(test_disabled_auto_config_retries_saved_credentials_after_timeout);
   RUN_TEST(test_stored_credentials_connect_emits_connected_once);
   RUN_TEST(test_stored_credentials_timeout_falls_back_to_improv);
+  RUN_TEST(test_failed_post_improv_retry_starts_portal_when_enabled);
   RUN_TEST(test_improv_activity_extends_wait_window);
   RUN_TEST(test_improv_activity_during_connecting_carries_over);
   RUN_TEST(test_improv_provisioning_during_wait_connects);

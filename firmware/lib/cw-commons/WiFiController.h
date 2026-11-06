@@ -184,6 +184,14 @@ struct WiFiController
       startApPortal();
       break;
 
+    case cw::WiFiSetupAction::RetryStationConnect: {
+      ClockwiseParams *params = ClockwiseParams::getInstance();
+      params->load();
+      Serial.printf("[WiFi] Retrying saved credentials for %s\n", params->wifiSsid.c_str());
+      WiFi.begin(params->wifiSsid.c_str(), params->wifiPwd.c_str());
+      break;
+    }
+
     case cw::WiFiSetupAction::Connected:
       onConnected();
       return true;
