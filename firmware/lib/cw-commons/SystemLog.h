@@ -164,5 +164,3 @@ public:
     return length;
   }
 };
-
-using CanvasLog = SystemLog;
