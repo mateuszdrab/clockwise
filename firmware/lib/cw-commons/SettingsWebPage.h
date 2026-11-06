@@ -54,8 +54,8 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
       console.log(settings);
       const cards = [
         {
-          title: "Display Bright",
-          description: "0 = dark (display off) / 255 = super bright | Value: <strong><output id='rangevalue'>" + settings.displaybright + "</output></strong>",
+          title: "Display Brightness",
+          description: "0 = off / 255 = maximum. When automatic brightness is enabled, this sets its maximum level. Value: <strong><output id='rangevalue'>" + settings.displaybright + "</output></strong>",
           formInput: "<input class='w3-input w3-border' type='range' min='0' max='255' value='" + settings.displaybright + "' class='slider' id='bright' oninput='rangevalue.value=value'>",
           icon: "fa-adjust",
           save: "updatePreference('displayBright', bright.value)",
