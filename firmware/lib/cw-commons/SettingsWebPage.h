@@ -128,7 +128,7 @@ const char SETTINGS_PAGE[] PROGMEM = R""""(
         },
         {
           title: "LDR Pin",
-          description: "The GPIO pin where the LDR is connected to. Use just the numeric value (default: 35) | <a href='#' onclick='readPin(ldrPin.value);'>Read Pin: </a><strong id='ldrPinRead'>0</strong> | Level: <strong id='ldrLevelRead'>0</strong> | Brightness: <strong id='ldrBrightnessRead'>0</strong> (target <strong id='ldrTargetRead'>0</strong>)",
+          description: "The GPIO pin where the LDR is connected to. Use just the numeric value (default: 35) | <a href='#' onclick='readPin(ldrPin.value); return false;'>Read Pin: </a><strong id='ldrPinRead'>0</strong> | Level: <strong id='ldrLevelRead'>0</strong> | Brightness: <strong id='ldrBrightnessRead'>0</strong> (target <strong id='ldrTargetRead'>0</strong>)",
           formInput: "<input id='ldrPin' class='w3-input w3-light-grey' name='ldrPin' type='number' min='0' max='39' value='" + settings.ldrpin + "'>",
           icon: "fa-microchip",
           save: "updatePreference('ldrPin', ldrPin.value)",
